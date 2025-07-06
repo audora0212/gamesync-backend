@@ -30,6 +30,7 @@ public class ServerService {
     private final UserRepository userRepo;
     private final TimetableEntryRepository entryRepo;
     private final CustomGameRepository customGameRepo;
+    private final AuditService auditService;
 
     /* ---------- 생성 / 참가 ---------- */
 
@@ -63,6 +64,7 @@ public class ServerService {
                 .inviteCode(code)
                 .build();
 
+        auditService.log(srv.getId(), owner.getId(), "CREATE_SERVER", "name=" + req.getName());
         serverRepo.save(srv);
         return toDto(srv);
     }
@@ -87,6 +89,7 @@ public class ServerService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "이미 참가한 서버입니다");
         srv.getMembers().add(user);
         serverRepo.save(srv);
+        auditService.log(srv.getId(), user.getId(), "JOIN_SERVER", null);
         return toDto(srv);
     }
 
@@ -126,6 +129,8 @@ public class ServerService {
         srv.getMembers().remove(target);
         srv.getAdmins().remove(target);
         serverRepo.save(srv);
+        auditService.log(srv.getId(), me.getId(), "KICK_MEMBER", "targetUserId=" + req.getUserId());
+
         return toDto(srv);
     }
 
@@ -147,6 +152,9 @@ public class ServerService {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "서버장은 항상 관리자입니다");
             srv.getAdmins().remove(target);
         }
+        String detail = (req.isGrant() ? "GRANT_ADMIN:" : "REVOKE_ADMIN:") + req.getUserId();
+        auditService.log(srv.getId(), me.getId(), "CHANGE_ADMIN", detail);
+
         serverRepo.save(srv);
         return toDto(srv);
     }
@@ -183,6 +191,7 @@ public class ServerService {
         srv.getMembers().remove(me);
         srv.getAdmins().remove(me);
         serverRepo.save(srv);
+        auditService.log(srv.getId(), me.getId(), "LEAVE_SERVER", null);
     }
 
     /* ---------- 조회 ---------- */

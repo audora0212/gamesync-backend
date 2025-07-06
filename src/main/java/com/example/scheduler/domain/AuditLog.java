@@ -18,7 +18,7 @@ public class AuditLog {
     private Long id;
     private Long serverId;
     private Long userId;
-    private String action;        // "JOIN", "LEAVE", "ADD_SCHEDULE" 등
+    private String action;        // "REGISTER", "JOIN", "LEAVE" 등
     @Column(name = "occurred_at", nullable = false)
     private LocalDateTime occurredAt;
     private String details;       // 추가 정보
