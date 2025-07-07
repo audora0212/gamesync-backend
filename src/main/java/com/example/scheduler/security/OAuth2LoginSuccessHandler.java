@@ -24,7 +24,6 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
     private final UserRepository    userRepo;
     private final ObjectMapper      objectMapper = new ObjectMapper();
 
-    // 프로퍼티 주입
     @Value("${app.frontend.base-url}")
     private String frontendBaseUrl;
 
