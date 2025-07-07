@@ -5,20 +5,19 @@ import com.example.scheduler.service.DiscordOAuth2UserService;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
-
 import java.util.List;
 
 @Configuration
@@ -43,20 +42,19 @@ public class SecurityConfig {
     }
 
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http,
-                                                   CorsConfigurationSource corsSource) throws Exception {
+    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         // JWT 필터
         JwtAuthenticationFilter jwtFilter =
                 new JwtAuthenticationFilter(tokenProvider, userDetailsService);
 
         http
-                // CORS 활성화 및 명시적 설정
-                .cors(cors -> cors.configurationSource(corsSource))
+                // CORS
+                .cors(Customizer.withDefaults())
                 // CSRF 비활성화
                 .csrf(AbstractHttpConfigurer::disable)
-                // 세션 사용 안 함
+                // 세션을 사용하지 않음
                 .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                // URL별 인가 설정
+                // URL 별 인가 설정
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(
                                 "/api/auth/**",
@@ -68,26 +66,36 @@ public class SecurityConfig {
                 )
                 // OAuth2 로그인 설정
                 .oauth2Login(oauth2 -> oauth2
+                        // 커스텀 로그인 페이지 (Next.js)
                         .loginPage("/auth/login")
-                        .authorizationEndpoint(a -> a.baseUri("/oauth2/authorization"))
-                        .redirectionEndpoint(r -> r.baseUri("/login/oauth2/code/*"))
-                        .userInfoEndpoint(u -> u.userService(oauth2UserService))
+                        // authorization 요청 엔드포인트
+                        .authorizationEndpoint(a -> a
+                                .baseUri("/oauth2/authorization")
+                        )
+                        // 콜백 엔드포인트
+                        .redirectionEndpoint(r -> r
+                                .baseUri("/login/oauth2/code/*")
+                        )
+                        // DiscordOAuth2UserService 주입
+                        .userInfoEndpoint(u -> u
+                                .userService(oauth2UserService)
+                        )
+                        // 성공 핸들러
                         .successHandler(oauth2SuccessHandler)
                 )
-                // JWT 필터 등록
+                // JWT 필터를 UsernamePasswordAuthenticationFilter 전에 등록
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
 
+    // CORS 설정
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration cfg = new CorsConfiguration();
-        // 컴마로 구분된 origin들을 순회하며 추가
-        for (String origin : allowedOrigins.split(",")) {
-            cfg.addAllowedOrigin(origin.trim());
-        }
-        cfg.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        // 단일 origin, 혹은 콤마(,) 구분으로 여러 개
+        cfg.setAllowedOrigins(List.of(allowedOrigins.split(",")));
+        cfg.setAllowedMethods(List.of("GET","POST","PUT","DELETE","OPTIONS"));
         cfg.setAllowedHeaders(List.of("*"));
         cfg.setAllowCredentials(true);
         cfg.setMaxAge(3600L);
@@ -97,11 +105,13 @@ public class SecurityConfig {
         return source;
     }
 
+    // 비밀번호 암호화
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
 
+    // AuthenticationManager 빈
     @Bean
     public AuthenticationManager authenticationManager(AuthenticationConfiguration authConfig) throws Exception {
         return authConfig.getAuthenticationManager();
