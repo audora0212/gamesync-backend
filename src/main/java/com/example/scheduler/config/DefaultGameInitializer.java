@@ -27,7 +27,7 @@ public class DefaultGameInitializer implements ApplicationRunner {
             while ((line = reader.readLine()) != null) {
                 String name = line.trim();
                 if (name.isEmpty()) continue;
-                // 이미 존재하지 않으면 삽입
+                // 존재하지 않으면 삽입
                 defaultGameRepository.findByName(name)
                         .orElseGet(() -> defaultGameRepository.save(
                                 DefaultGame.builder()

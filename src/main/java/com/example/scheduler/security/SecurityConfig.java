@@ -60,7 +60,9 @@ public class SecurityConfig {
                                 "/api/auth/**",
                                 "/oauth2/**",
                                 "/login/oauth2/**",
-                                "/error"
+                                "/error",
+                                "/actuator/health",    // ← 여기에 추가
+                                "/actuator/info"       // ← 필요 시 추가
                         ).permitAll()
                         .anyRequest().authenticated()
                 )

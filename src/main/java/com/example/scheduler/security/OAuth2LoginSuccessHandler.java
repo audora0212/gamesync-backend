@@ -60,7 +60,7 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
         // properties 로 뺀 값 사용
         String redirectUrl = String.format(
                 "%s%s?token=%s&user=%s",
-                frontendBaseUrl,
+                frontendBaseUrl, //  내 아이피 ~~~
                 discordCallbackPath,
                 token,
                 encodedUser

@@ -39,7 +39,7 @@ public class GameController {
         return ResponseEntity.ok(gameService.addCustomGame(serverId, req));
     }
 
-    @DeleteMapping("/servers/{serverId}/custom-games/{gameId}")   // ⭐ 커스텀 게임 삭제
+    @DeleteMapping("/servers/{serverId}/custom-games/{gameId}")
     public ResponseEntity<Void> deleteCustomGame(
             @PathVariable Long serverId,
             @PathVariable Long gameId) {

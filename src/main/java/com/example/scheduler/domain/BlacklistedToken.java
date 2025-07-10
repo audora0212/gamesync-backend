@@ -14,7 +14,7 @@ public class BlacklistedToken {
     private Long id;
 
     @Column(nullable = false, unique = true, length = 500)
-    private String token;          // 실제 JWT 문자열
+    private String token;
 
     @Column(nullable = false)
     @Temporal(TemporalType.TIMESTAMP)
