@@ -1,6 +1,7 @@
 # GameSync Backend
 
 > **협업:**
+>
 > **최영찬 (Lead)** – 전체 아키텍처 설계, 인증/보안, 스케줄러, 중요 API 설계 및 구현
 > 
 > **정승수 (Team)** – 서비스 구현 (GameService, TimetableService), 예외 처리, 테스트, 문서 보강
