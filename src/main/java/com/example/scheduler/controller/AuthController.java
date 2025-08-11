@@ -58,4 +58,5 @@ public class AuthController {
         authService.logout(authHeader);
         return ResponseEntity.ok(Map.of("message", "로그아웃되었습니다"));
     }
+
 }

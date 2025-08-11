@@ -44,4 +44,21 @@ public class UserController {
         String username = auth.getName();
         return ResponseEntity.ok(userService.updateNotificationSetting(username, Boolean.TRUE.equals(req.getEnabled())));
     }
+
+    // 친구별 알림 on/off 설정
+    @PutMapping("/friend-notifications")
+    public ResponseEntity<Void> updateFriendNotifications(
+            Authentication auth,
+            @RequestBody UserDto.UpdateFriendNotificationSetting req
+    ) {
+        String username = auth.getName();
+        userService.updateFriendNotificationSetting(username, req.getFriendUserId(), Boolean.TRUE.equals(req.getEnabled()));
+        return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/friend-notifications")
+    public ResponseEntity<java.util.List<UserDto.FriendNotificationItem>> listFriendNotifications(Authentication auth) {
+        String username = auth.getName();
+        return ResponseEntity.ok(userService.listFriendNotificationSettings(username));
+    }
 }

@@ -165,8 +165,9 @@ public class TimetableService {
                 String gameName = (entry.getCustomGame() != null)
                         ? entry.getCustomGame().getName()
                         : entry.getDefaultGame().getName();
-                notificationService.notify(
-                        m,
+                notificationService.notifyIfFriendEnabled(
+                        m, // owner(수신자)
+                        actor, // friend(발신자)
                         com.example.scheduler.domain.NotificationType.TIMETABLE,
                         "친구의 스케줄 등록",
                         String.format("%s님이 %s 서버에 %s 예약을 등록했습니다.", actor.getNickname(), server.getName(), gameName)

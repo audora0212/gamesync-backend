@@ -11,6 +11,7 @@ public class UserDto {
         private String nickname;
         private String email;
         private Boolean notificationsEnabled;
+        private Boolean discordLinked;
     }
 
     @Data
@@ -25,6 +26,19 @@ public class UserDto {
 
     @Data
     public static class UpdateNotificationSetting {
+        private Boolean enabled;
+    }
+
+    @Data
+    public static class UpdateFriendNotificationSetting {
+        private Long friendUserId;
+        private Boolean enabled;
+    }
+
+    @Data @AllArgsConstructor
+    public static class FriendNotificationItem {
+        private Long friendUserId;
+        private String friendNickname;
         private Boolean enabled;
     }
 }

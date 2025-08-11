@@ -22,6 +22,7 @@ import java.util.stream.Collectors;
 public class NotificationService {
     private final NotificationRepository notificationRepository;
     private final UserRepository userRepository;
+    private final com.example.scheduler.repository.FriendNotificationSettingRepository friendNotiRepo;
 
     private User currentUser() {
         String username = SecurityContextHolder.getContext().getAuthentication().getName();
@@ -42,6 +43,15 @@ public class NotificationService {
                 .createdAt(LocalDateTime.now())
                 .build();
         notificationRepository.save(n);
+    }
+
+    public void notifyIfFriendEnabled(User owner, User friend, NotificationType type, String title, String message) {
+        if (Boolean.FALSE.equals(owner.getNotificationsEnabled())) return;
+        boolean enabled = friendNotiRepo.findByOwnerAndFriend(owner, friend)
+                .map(com.example.scheduler.domain.FriendNotificationSetting::isEnabled)
+                .orElse(true);
+        if (!enabled) return;
+        notify(owner, type, title, message);
     }
 
     @Transactional(readOnly = true)

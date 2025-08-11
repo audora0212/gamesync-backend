@@ -28,6 +28,7 @@ public class AuthService {
     private final FriendCodeService friendCodeService;
 
     private final BlacklistedTokenRepository blacklistRepo;
+    
 
     /* ---------- 회원가입 & 로그인 ---------- */
 
