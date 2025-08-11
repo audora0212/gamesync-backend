@@ -22,6 +22,13 @@ public class NotificationController {
         notificationService.markAsRead(id);
         return ResponseEntity.noContent().build();
     }
+
+    // 모든 내 알림 삭제
+    @DeleteMapping
+    public ResponseEntity<Void> clearAll() {
+        notificationService.clearAllMine();
+        return ResponseEntity.noContent().build();
+    }
 }
 
 

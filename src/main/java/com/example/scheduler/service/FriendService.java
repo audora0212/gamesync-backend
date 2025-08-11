@@ -126,6 +126,12 @@ public class FriendService {
                     String.format("%s님이 친구 요청을 거절했습니다.", me.getNickname())
             );
         }
+
+        // 내 알림 목록에서 해당 친구요청 알림 제거 (payload 에 requestId 포함)
+        notificationService.deleteMineByMessageFragment(
+                com.example.scheduler.domain.NotificationType.GENERIC,
+                "\"requestId\":" + requestId
+        );
     }
 
     private void acceptInternal(FriendRequest req) {

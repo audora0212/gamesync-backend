@@ -76,6 +76,12 @@ public class NotificationService {
         notificationRepository.save(n);
     }
 
+    @Transactional
+    public void clearAllMine() {
+        User me = currentUser();
+        notificationRepository.deleteByUser(me);
+    }
+
     private NotificationDto.NotificationResponse toDto(Notification n) {
         return new NotificationDto.NotificationResponse(
                 n.getId(),
@@ -85,6 +91,13 @@ public class NotificationService {
                 n.isRead(),
                 n.getCreatedAt()
         );
+    }
+
+    /** 현재 사용자 알림 중, 타입과 메시지 일부 일치로 삭제 */
+    @Transactional
+    public void deleteMineByMessageFragment(NotificationType type, String messageFragment) {
+        User me = currentUser();
+        notificationRepository.deleteByUserAndTypeAndMessageContaining(me, type, messageFragment);
     }
 }
 

@@ -336,6 +336,12 @@ public class ServerService {
             );
         }
         inviteRepo.save(inv);
+
+        // 내 알림 목록에서 해당 초대 알림 제거 (payload 에 inviteId 포함)
+        notificationService.deleteMineByMessageFragment(
+                com.example.scheduler.domain.NotificationType.INVITE,
+                "\"inviteId\":" + inviteId
+        );
         return toInviteDto(inv);
     }
 
