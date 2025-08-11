@@ -79,7 +79,21 @@ public class NotificationService {
     @Transactional
     public void clearAllMine() {
         User me = currentUser();
-        notificationRepository.deleteByUser(me);
+        // 서버 초대(INVITE)와 친구 요청(GENERIC + payload kind=friend_request)은 보존
+        var all = notificationRepository.findByUserOrderByCreatedAtDesc(me);
+        java.util.List<Long> deletableIds = new java.util.ArrayList<>();
+        for (var n : all) {
+            boolean isServerInvite = n.getType() == NotificationType.INVITE;
+            boolean isFriendRequest = n.getType() == NotificationType.GENERIC
+                    && n.getMessage() != null
+                    && n.getMessage().contains("\"kind\":\"friend_request\"");
+            if (!(isServerInvite || isFriendRequest)) {
+                deletableIds.add(n.getId());
+            }
+        }
+        if (!deletableIds.isEmpty()) {
+            notificationRepository.deleteAllByIdInBatch(deletableIds);
+        }
     }
 
     private NotificationDto.NotificationResponse toDto(Notification n) {
