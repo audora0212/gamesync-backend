@@ -28,4 +28,11 @@ public class UserController {
         String username = auth.getName();
         return ResponseEntity.ok(userService.updateNickname(username, req.getNickname()));
     }
+
+    // 내 친구코드 확인 (프론트에서 보여주면 됨)
+    @GetMapping("/friend-code")
+    public ResponseEntity<UserDto.FriendCode> getFriendCode(Authentication auth) {
+        String username = auth.getName();
+        return ResponseEntity.ok(userService.getMyFriendCode(username));
+    }
 }

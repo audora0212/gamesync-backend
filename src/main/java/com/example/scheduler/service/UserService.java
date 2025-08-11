@@ -26,4 +26,11 @@ public class UserService {
         userRepository.save(user);
         return new UserDto.Profile(user.getId(), user.getUsername(), user.getNickname(), user.getEmail());
     }
+
+    // 내 친구코드 확인
+    public UserDto.FriendCode getMyFriendCode(String username) {
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        return new UserDto.FriendCode(user.getFriendCode());
+    }
 }

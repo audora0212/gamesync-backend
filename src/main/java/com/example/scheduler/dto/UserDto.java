@@ -16,4 +16,9 @@ public class UserDto {
     public static class UpdateNickname {
         private String nickname;
     }
+
+    @Data @AllArgsConstructor
+    public static class FriendCode {
+        private String code;            // 6자리 코드
+    }
 }

@@ -30,6 +30,9 @@ public class User {
     @Column(unique = true, nullable = true)
     private String email;                 // ← 새로 추가된 이메일 필드
 
+    @Column(length = 6, unique = true)
+    private String friendCode;            // ← 친구코드(6자리 숫자)
+
     @ManyToMany(mappedBy = "members")
     private Set<Server> joinedServers;    // 참여중인 서버
 }
