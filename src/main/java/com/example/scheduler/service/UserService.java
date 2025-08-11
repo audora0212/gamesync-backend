@@ -7,6 +7,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.http.HttpStatus;
+import java.time.Duration;
+import java.time.LocalDateTime;
 
 @Service
 @RequiredArgsConstructor
@@ -30,7 +32,25 @@ public class UserService {
     public UserDto.Profile updateNickname(String username, String newNickname) {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        // 24시간 제한 체크
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime lastChangedAt = user.getNicknameChangedAt();
+        if (lastChangedAt != null) {
+            LocalDateTime availableAt = lastChangedAt.plusHours(24);
+            if (now.isBefore(availableAt)) {
+                Duration remaining = Duration.between(now, availableAt);
+                long totalMinutes = Math.max(0, remaining.toMinutes());
+                long hours = totalMinutes / 60;
+                long minutes = totalMinutes % 60;
+                String message = String.format(
+                        "닉네임 변경은 24시간에 한 번만 가능합니다. %d시간 %d분 뒤에 닉네임 변경이 가능합니다.",
+                        hours, minutes
+                );
+                throw new ResponseStatusException(HttpStatus.TOO_MANY_REQUESTS, message);
+            }
+        }
         user.setNickname(newNickname);
+        user.setNicknameChangedAt(now);
         userRepository.save(user);
         return new UserDto.Profile(
                 user.getId(),

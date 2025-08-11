@@ -6,6 +6,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
+
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/users/me")
@@ -20,12 +23,18 @@ public class UserController {
     }
 
     @PutMapping("/nickname")
-    public ResponseEntity<UserDto.Profile> updateNickname(
+    public ResponseEntity<?> updateNickname(
             Authentication auth,
             @RequestBody UserDto.UpdateNickname req
     ) {
         String username = auth.getName();
-        return ResponseEntity.ok(userService.updateNickname(username, req.getNickname()));
+        try {
+            return ResponseEntity.ok(userService.updateNickname(username, req.getNickname()));
+        } catch (ResponseStatusException ex) {
+            return ResponseEntity.status(ex.getStatusCode()).body(Map.of(
+                    "message", ex.getReason() != null ? ex.getReason() : "닉네임 변경에 실패했습니다"
+            ));
+        }
     }
 
     // 내 친구코드 확인 (프론트에서 보여주면 됨)

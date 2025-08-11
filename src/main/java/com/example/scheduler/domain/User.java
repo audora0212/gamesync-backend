@@ -3,6 +3,7 @@ package com.example.scheduler.domain;
 
 import jakarta.persistence.*;
 import lombok.*;
+import java.time.LocalDateTime;
 import java.util.Set;
 
 @Entity
@@ -39,4 +40,8 @@ public class User {
     @Builder.Default
     @Column(nullable = true)
     private Boolean notificationsEnabled = true; // 사용자 알림 on/off (null 허용: 기존 데이터 호환)
+
+    /** 마지막 닉네임 변경 시각 (24시간 제한 용도) */
+    @Column(name = "nickname_changed_at")
+    private LocalDateTime nicknameChangedAt;
 }
