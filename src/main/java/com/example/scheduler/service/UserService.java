@@ -16,7 +16,13 @@ public class UserService {
     public UserDto.Profile getProfile(String username) {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
-        return new UserDto.Profile(user.getId(), user.getUsername(), user.getNickname(), user.getEmail());
+        return new UserDto.Profile(
+                user.getId(),
+                user.getUsername(),
+                user.getNickname(),
+                user.getEmail(),
+                user.getNotificationsEnabled()
+        );
     }
 
     public UserDto.Profile updateNickname(String username, String newNickname) {
@@ -24,7 +30,13 @@ public class UserService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
         user.setNickname(newNickname);
         userRepository.save(user);
-        return new UserDto.Profile(user.getId(), user.getUsername(), user.getNickname(), user.getEmail());
+        return new UserDto.Profile(
+                user.getId(),
+                user.getUsername(),
+                user.getNickname(),
+                user.getEmail(),
+                user.getNotificationsEnabled()
+        );
     }
 
     // 내 친구코드 확인
@@ -32,5 +44,19 @@ public class UserService {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
         return new UserDto.FriendCode(user.getFriendCode());
+    }
+
+    public UserDto.Profile updateNotificationSetting(String username, boolean enabled) {
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        user.setNotificationsEnabled(enabled);
+        userRepository.save(user);
+        return new UserDto.Profile(
+                user.getId(),
+                user.getUsername(),
+                user.getNickname(),
+                user.getEmail(),
+                user.getNotificationsEnabled()
+        );
     }
 }

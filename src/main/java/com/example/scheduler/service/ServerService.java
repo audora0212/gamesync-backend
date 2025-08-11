@@ -5,6 +5,8 @@ import com.example.scheduler.domain.Server;
 import com.example.scheduler.domain.User;
 import com.example.scheduler.dto.ServerDto;
 import com.example.scheduler.repository.CustomGameRepository;
+import com.example.scheduler.repository.FriendshipRepository;
+import com.example.scheduler.repository.ServerInviteRepository;
 import com.example.scheduler.repository.ServerRepository;
 import com.example.scheduler.repository.TimetableEntryRepository;
 import com.example.scheduler.repository.UserRepository;
@@ -32,6 +34,8 @@ public class ServerService {
     private final CustomGameRepository customGameRepo;
     private final AuditService auditService;
     private final boolean AuditEnable=true; //감사로그 온오프
+    private final ServerInviteRepository inviteRepo;
+    private final FriendshipRepository friendshipRepository;
 
     /* ---------- 생성 / 참가 ---------- */
 
@@ -222,6 +226,68 @@ public class ServerService {
         return toDto(srv);
     }
 
+    /* ---------- 초대 기능 ---------- */
+    public ServerDto.InviteResponse createInvite(Long serverId, Long receiverUserId) {
+        Server srv = fetch(serverId);
+        User sender = currentUser();
+        if (!srv.getMembers().contains(sender))
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "서버 멤버만 초대 가능");
+
+        User receiver = userRepo.findById(receiverUserId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+
+        boolean areFriends = friendshipRepository.existsByUserAndFriend(sender, receiver)
+                || friendshipRepository.existsByUserAndFriend(receiver, sender);
+        if (!areFriends)
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "친구만 초대 가능");
+
+        var existing = inviteRepo.findByServerAndSenderAndReceiver(srv, sender, receiver);
+        if (existing.isPresent() && existing.get().getStatus() == com.example.scheduler.domain.InviteStatus.PENDING) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "이미 대기중 초대가 있습니다");
+        }
+
+        com.example.scheduler.domain.ServerInvite inv = com.example.scheduler.domain.ServerInvite.builder()
+                .server(srv)
+                .sender(sender)
+                .receiver(receiver)
+                .status(com.example.scheduler.domain.InviteStatus.PENDING)
+                .createdAt(java.time.LocalDateTime.now())
+                .build();
+        inv = inviteRepo.save(inv);
+
+        return toInviteDto(inv);
+    }
+
+    public java.util.List<ServerDto.InviteResponse> listMyInvites() {
+        User me = currentUser();
+        return inviteRepo.findByReceiverAndStatus(me, com.example.scheduler.domain.InviteStatus.PENDING)
+                .stream().map(this::toInviteDto).collect(java.util.stream.Collectors.toList());
+    }
+
+    public ServerDto.InviteResponse respondInvite(Long inviteId, boolean accept) {
+        User me = currentUser();
+        com.example.scheduler.domain.ServerInvite inv = inviteRepo.findById(inviteId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        if (!inv.getReceiver().getId().equals(me.getId()))
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "내 초대만 응답 가능");
+        if (inv.getStatus() != com.example.scheduler.domain.InviteStatus.PENDING)
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "이미 처리된 초대");
+
+        if (accept) {
+            inv.setStatus(com.example.scheduler.domain.InviteStatus.ACCEPTED);
+            // 서버 가입 처리
+            Server srv = inv.getServer();
+            if (!srv.getMembers().contains(me)) {
+                srv.getMembers().add(me);
+                serverRepo.save(srv);
+            }
+        } else {
+            inv.setStatus(com.example.scheduler.domain.InviteStatus.REJECTED);
+        }
+        inviteRepo.save(inv);
+        return toInviteDto(inv);
+    }
+
     /* ---------- 내부 헬퍼 ---------- */
 
     private User currentUser() {
@@ -256,6 +322,20 @@ public class ServerService {
                 adms,
                 s.getResetTime(),
                 s.getInviteCode()
+        );
+    }
+
+    private ServerDto.InviteResponse toInviteDto(com.example.scheduler.domain.ServerInvite inv) {
+        return new ServerDto.InviteResponse(
+                inv.getId(),
+                inv.getServer().getId(),
+                inv.getServer().getName(),
+                inv.getSender().getId(),
+                inv.getSender().getNickname(),
+                inv.getReceiver().getId(),
+                inv.getReceiver().getNickname(),
+                inv.getStatus().name(),
+                inv.getCreatedAt()
         );
     }
 }

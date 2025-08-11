@@ -3,6 +3,8 @@ package com.example.scheduler.config;
 import com.example.scheduler.domain.DefaultGame;
 import com.example.scheduler.repository.DefaultGameRepository;
 import lombok.RequiredArgsConstructor;
+import com.example.scheduler.repository.UserRepository;
+import com.example.scheduler.service.FriendCodeService;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.core.io.ClassPathResource;
@@ -17,6 +19,8 @@ import java.io.InputStreamReader;
 public class DefaultGameInitializer implements ApplicationRunner {
 
     private final DefaultGameRepository defaultGameRepository;
+    private final UserRepository userRepository;
+    private final FriendCodeService friendCodeService;
 
     @Override
     public void run(ApplicationArguments args) throws Exception {
@@ -36,5 +40,13 @@ public class DefaultGameInitializer implements ApplicationRunner {
                         ));
             }
         }
+
+        // 2) 친구코드 없는 사용자 자동 보정
+        userRepository.findAll().forEach(u -> {
+            if (u.getFriendCode() == null || u.getFriendCode().isBlank()) {
+                u.setFriendCode(friendCodeService.generateUniqueFriendCode());
+                userRepository.save(u);
+            }
+        });
     }
 }

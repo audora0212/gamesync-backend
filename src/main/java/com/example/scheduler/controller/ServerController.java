@@ -95,4 +95,23 @@ public class ServerController {
     public ResponseEntity<ServerDto.Response> detail(@PathVariable Long id) {
         return ResponseEntity.ok(serverService.getDetail(id));
     }
+
+    /* ---------- 초대 API ---------- */
+    @PostMapping("/invites")
+    public ResponseEntity<ServerDto.InviteResponse> createInvite(@RequestBody ServerDto.InviteCreateRequest req) {
+        return ResponseEntity.ok(serverService.createInvite(req.getServerId(), req.getReceiverUserId()));
+    }
+
+    @GetMapping("/invites/me")
+    public ResponseEntity<java.util.List<ServerDto.InviteResponse>> myInvites() {
+        return ResponseEntity.ok(serverService.listMyInvites());
+    }
+
+    @PostMapping("/invites/{inviteId}/respond")
+    public ResponseEntity<ServerDto.InviteResponse> respondInvite(
+            @PathVariable Long inviteId,
+            @RequestBody ServerDto.InviteDecisionRequest req
+    ) {
+        return ResponseEntity.ok(serverService.respondInvite(inviteId, req.isAccept()));
+    }
 }

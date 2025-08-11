@@ -35,4 +35,8 @@ public class User {
 
     @ManyToMany(mappedBy = "members")
     private Set<Server> joinedServers;    // 참여중인 서버
+
+    @Builder.Default
+    @Column(nullable = true)
+    private Boolean notificationsEnabled = true; // 사용자 알림 on/off (null 허용: 기존 데이터 호환)
 }

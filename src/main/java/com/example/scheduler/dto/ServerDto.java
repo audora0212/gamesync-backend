@@ -5,7 +5,6 @@ import lombok.*;
 
 import java.time.LocalTime;
 import java.util.List;
-import java.util.Set;
 
 public class ServerDto {
 
@@ -38,6 +37,12 @@ public class ServerDto {
         private boolean grant;   // true: 임명, false: 해제
     }
 
+    @Data
+    public static class InviteCreateRequest {
+        private Long serverId;
+        private Long receiverUserId;
+    }
+
     /* ---------- 응답용 DTO ---------- */
 
     @Data @AllArgsConstructor
@@ -56,5 +61,23 @@ public class ServerDto {
     public static class MemberInfo {
         private Long id;
         private String nickname;
+    }
+
+    @Data @AllArgsConstructor
+    public static class InviteResponse {
+        private Long id;
+        private Long serverId;
+        private String serverName;
+        private Long senderId;
+        private String senderNickname;
+        private Long receiverId;
+        private String receiverNickname;
+        private String status;
+        private java.time.LocalDateTime createdAt;
+    }
+
+    @Data
+    public static class InviteDecisionRequest {
+        private boolean accept;
     }
 }

@@ -10,6 +10,7 @@ public class UserDto {
         private String username;
         private String nickname;
         private String email;
+        private Boolean notificationsEnabled;
     }
 
     @Data
@@ -20,5 +21,10 @@ public class UserDto {
     @Data @AllArgsConstructor
     public static class FriendCode {
         private String code;            // 6자리 코드
+    }
+
+    @Data
+    public static class UpdateNotificationSetting {
+        private Boolean enabled;
     }
 }

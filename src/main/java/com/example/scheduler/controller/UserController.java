@@ -1,6 +1,5 @@
 package com.example.scheduler.controller;
 
-import com.example.scheduler.domain.User;
 import com.example.scheduler.dto.UserDto;
 import com.example.scheduler.service.UserService;
 import lombok.RequiredArgsConstructor;
@@ -34,5 +33,15 @@ public class UserController {
     public ResponseEntity<UserDto.FriendCode> getFriendCode(Authentication auth) {
         String username = auth.getName();
         return ResponseEntity.ok(userService.getMyFriendCode(username));
+    }
+
+    // 사용자 알림 on/off 설정
+    @PutMapping("/notifications")
+    public ResponseEntity<UserDto.Profile> updateNotifications(
+            Authentication auth,
+            @RequestBody UserDto.UpdateNotificationSetting req
+    ) {
+        String username = auth.getName();
+        return ResponseEntity.ok(userService.updateNotificationSetting(username, Boolean.TRUE.equals(req.getEnabled())));
     }
 }
