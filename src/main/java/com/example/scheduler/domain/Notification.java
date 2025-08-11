@@ -27,7 +27,8 @@ public class Notification {
     @Column(nullable = true, length = 1000)
     private String message;
 
-    @Column(nullable = false)
+    // MySQL 예약어(read) 충돌 방지를 위해 컬럼명을 변경
+    @Column(name = "is_read", nullable = false)
     private boolean read;
 
     @Column(nullable = false)
