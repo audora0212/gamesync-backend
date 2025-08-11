@@ -280,12 +280,16 @@ public class ServerService {
                 .build();
         inv = inviteRepo.save(inv);
 
-        // 알림: 초대 수신자에게 통지
+        // 알림: 초대 수신자에게 통지 (초대 ID를 payload 로 포함)
+        String invitePayload = String.format(
+                "{\"kind\":\"server_invite\",\"inviteId\":%d,\"serverName\":\"%s\",\"fromNickname\":\"%s\"}",
+                inv.getId(), srv.getName(), sender.getNickname()
+        );
         notificationService.notify(
                 receiver,
                 com.example.scheduler.domain.NotificationType.INVITE,
                 "서버 초대",
-                String.format("%s님이 '%s' 서버로 초대했습니다.", sender.getNickname(), srv.getName())
+                invitePayload
         );
 
         return toInviteDto(inv);
@@ -314,8 +318,22 @@ public class ServerService {
                 srv.getMembers().add(me);
                 serverRepo.save(srv);
             }
+            // 초대 발신자에게 수락 알림
+            notificationService.notify(
+                    inv.getSender(),
+                    com.example.scheduler.domain.NotificationType.INVITE,
+                    "초대가 수락되었습니다",
+                    String.format("%s님이 '%s' 서버 초대를 수락했습니다.", me.getNickname(), inv.getServer().getName())
+            );
         } else {
             inv.setStatus(com.example.scheduler.domain.InviteStatus.REJECTED);
+            // 초대 발신자에게 거절 알림
+            notificationService.notify(
+                    inv.getSender(),
+                    com.example.scheduler.domain.NotificationType.INVITE,
+                    "초대가 거절되었습니다",
+                    String.format("%s님이 '%s' 서버 초대를 거절했습니다.", me.getNickname(), inv.getServer().getName())
+            );
         }
         inviteRepo.save(inv);
         return toInviteDto(inv);

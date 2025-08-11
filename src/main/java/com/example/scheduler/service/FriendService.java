@@ -24,6 +24,7 @@ public class FriendService {
     private final UserRepository userRepository;
     private final FriendRequestRepository requestRepository;
     private final FriendshipRepository friendshipRepository;
+    private final NotificationService notificationService;
 
     private User getUserOr404(Long id) {
         return userRepository.findById(id)
@@ -78,6 +79,18 @@ public class FriendService {
                 .status(FriendRequestStatus.PENDING)
                 .build();
         requestRepository.save(req);
+
+        // 수신자에게 알림 (친구 요청)
+        String payload = String.format(
+                "{\"kind\":\"friend_request\",\"requestId\":%d,\"fromNickname\":\"%s\"}",
+                req.getId(), sender.getNickname()
+        );
+        notificationService.notify(
+                receiver,
+                com.example.scheduler.domain.NotificationType.GENERIC,
+                "친구 요청",
+                payload
+        );
     }
 
     @Transactional
@@ -95,9 +108,23 @@ public class FriendService {
 
         if (accept) {
             acceptInternal(req);
+            // 발신자에게 수락 알림
+            notificationService.notify(
+                    req.getSender(),
+                    com.example.scheduler.domain.NotificationType.GENERIC,
+                    "친구 요청이 수락되었습니다",
+                    String.format("%s님이 친구 요청을 수락했습니다.", me.getNickname())
+            );
         } else {
             req.setStatus(FriendRequestStatus.REJECTED);
             requestRepository.save(req);
+            // 발신자에게 거절 알림
+            notificationService.notify(
+                    req.getSender(),
+                    com.example.scheduler.domain.NotificationType.GENERIC,
+                    "친구 요청이 거절되었습니다",
+                    String.format("%s님이 친구 요청을 거절했습니다.", me.getNickname())
+            );
         }
     }
 
