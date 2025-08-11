@@ -19,9 +19,11 @@ public class DiscordOAuth2UserService
         implements OAuth2UserService<OAuth2UserRequest, OAuth2User> {
 
     private final UserRepository userRepo;
+    private final FriendCodeService friendCodeService;
 
-    public DiscordOAuth2UserService(UserRepository userRepo) {
+    public DiscordOAuth2UserService(UserRepository userRepo, FriendCodeService friendCodeService) {
         this.userRepo = userRepo;
+        this.friendCodeService = friendCodeService;
     }
 
     @Override
@@ -39,16 +41,23 @@ public class DiscordOAuth2UserService
                     User u = new User();
                     u.setDiscordId(discordId);
                     u.setUsername(username);
-                    u.setNickname(username);   // 최초 nickname 설정
-                    u.setEmail(email);         // 여기서 이메일 저장
+                    u.setNickname(username);
+                    u.setEmail(email);
+                    u.setFriendCode(friendCodeService.generateUniqueFriendCode());
                     return userRepo.save(u);
                 });
 
         // 기존 유저의 이메일이 없거나 바뀌었으면 업데이트
+        boolean dirty = false;
         if (email != null && !email.equals(user.getEmail())) {
             user.setEmail(email);
-            userRepo.save(user);
+            dirty = true;
         }
+        if (user.getFriendCode() == null || user.getFriendCode().isBlank()) {
+            user.setFriendCode(friendCodeService.generateUniqueFriendCode());
+            dirty = true;
+        }
+        if (dirty) userRepo.save(user);
 
         // 권한 세팅 및 id, username, nickname, email을 OAuth2User attribute에 포함
         return new DefaultOAuth2User(

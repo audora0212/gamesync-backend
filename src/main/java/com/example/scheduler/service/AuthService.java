@@ -25,6 +25,7 @@ public class AuthService {
     private final PasswordEncoder encoder;
     private final AuthenticationManager authManager;
     private final JwtTokenProvider jwtProvider;
+    private final FriendCodeService friendCodeService;
 
     private final BlacklistedTokenRepository blacklistRepo;
 
@@ -39,7 +40,7 @@ public class AuthService {
                 .username(req.getUsername())
                 .nickname(req.getNickname())
                 .password(encoder.encode(req.getPassword()))
-                .friendCode(generateUniqueFriendCode()) // ← 6자리 친구코드 부여
+                .friendCode(friendCodeService.generateUniqueFriendCode())
                 .build();
         userRepo.save(user);
     }
@@ -70,18 +71,5 @@ public class AuthService {
                         .build());
     }
 
-    /* ---------- 친구코드 유틸 ---------- */
-    private String generateUniqueFriendCode() {
-        // 000000 ~ 999999 (0 채움) 중에서 유니크한 코드가 나올 때까지 시도
-        java.security.SecureRandom rnd = new java.security.SecureRandom();
-        for (int attempt = 0; attempt < 50; attempt++) { // 너무 오래 돌지 않게 제한
-            int n = rnd.nextInt(1_000_000);
-            String code = String.format("%06d", n);
-            if (!userRepo.existsByFriendCode(code)) return code;
-        }
-        // 이 정도면 사실상 안 나오기 힘든데, 혹시 몰라 에러 처리
-        throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "친구코드 생성 실패. 잠시 후 다시 시도");
-    }
-
-
+    
 }
