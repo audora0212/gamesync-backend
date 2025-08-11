@@ -23,6 +23,7 @@ public class TimetableResetScheduler {
         LocalTime now = LocalTime.now().withSecond(0).withNano(0);
         List<Server> servers = serverRepo.findByResetTime(now);
         for (Server srv : servers) {
+            if (srv.isResetPaused()) continue;
             entryRepo.deleteAllByServer(srv);
         }
     }

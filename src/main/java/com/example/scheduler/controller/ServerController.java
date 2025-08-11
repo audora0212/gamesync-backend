@@ -58,6 +58,27 @@ public class ServerController {
         return ResponseEntity.ok(serverService.rename(id, req));
     }
 
+    @PutMapping("/{id}/description")
+    public ResponseEntity<ServerDto.Response> updateDescription(
+            @PathVariable Long id,
+            @RequestBody ServerDto.UpdateDescriptionRequest req) {
+        return ResponseEntity.ok(serverService.updateDescription(id, req));
+    }
+
+    @PutMapping("/{id}/max-members")
+    public ResponseEntity<ServerDto.Response> updateMaxMembers(
+            @PathVariable Long id,
+            @RequestBody ServerDto.UpdateMaxMembersRequest req) {
+        return ResponseEntity.ok(serverService.updateMaxMembers(id, req));
+    }
+
+    @PutMapping("/{id}/reset-paused")
+    public ResponseEntity<ServerDto.Response> toggleResetPaused(
+            @PathVariable Long id,
+            @RequestBody ServerDto.ToggleResetPausedRequest req) {
+        return ResponseEntity.ok(serverService.toggleResetPaused(id, req));
+    }
+
     @PostMapping("/{id}/kick")
     public ResponseEntity<ServerDto.Response> kick(
             @PathVariable Long id,

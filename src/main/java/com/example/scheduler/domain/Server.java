@@ -42,4 +42,14 @@ public class Server {
 
     @Column(nullable = false)
     private LocalTime resetTime;          // 타임테이블 초기화 시각
+
+    @Column
+    private String description;           // 서버 설명
+
+    @Column
+    private Integer maxMembers;           // 최대 멤버 수 (null이면 무제한)
+
+    @Builder.Default
+    @Column(nullable = false)
+    private boolean resetPaused = false;  // 리셋 일시중지
 }

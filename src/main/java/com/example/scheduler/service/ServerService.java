@@ -123,6 +123,30 @@ public class ServerService {
         return toDto(srv);
     }
 
+    public ServerDto.Response updateDescription(Long id, ServerDto.UpdateDescriptionRequest req) {
+        Server srv = fetch(id);
+        assertAdmin(srv, currentUser());
+        srv.setDescription(req.getDescription());
+        serverRepo.save(srv);
+        return toDto(srv);
+    }
+
+    public ServerDto.Response updateMaxMembers(Long id, ServerDto.UpdateMaxMembersRequest req) {
+        Server srv = fetch(id);
+        assertAdmin(srv, currentUser());
+        srv.setMaxMembers(req.getMaxMembers());
+        serverRepo.save(srv);
+        return toDto(srv);
+    }
+
+    public ServerDto.Response toggleResetPaused(Long id, ServerDto.ToggleResetPausedRequest req) {
+        Server srv = fetch(id);
+        assertAdmin(srv, currentUser());
+        srv.setResetPaused(req.isPaused());
+        serverRepo.save(srv);
+        return toDto(srv);
+    }
+
     /* ---------- 관리자 기능 ---------- */
 
     public ServerDto.Response kick(Long id, ServerDto.KickRequest req) {
@@ -330,7 +354,10 @@ public class ServerService {
                 mems,
                 adms,
                 s.getResetTime(),
-                s.getInviteCode()
+                s.getInviteCode(),
+                s.getDescription(),
+                s.getMaxMembers(),
+                s.isResetPaused()
         );
     }
 

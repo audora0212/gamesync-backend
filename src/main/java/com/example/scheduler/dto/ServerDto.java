@@ -26,6 +26,21 @@ public class ServerDto {
         private String name;
     }
 
+    @Data
+    public static class UpdateDescriptionRequest {
+        private String description;
+    }
+
+    @Data
+    public static class UpdateMaxMembersRequest {
+        private Integer maxMembers;
+    }
+
+    @Data
+    public static class ToggleResetPausedRequest {
+        private boolean paused;
+    }
+
     @Data                // 멤버 강퇴
     public static class KickRequest {
         private Long userId;
@@ -55,6 +70,9 @@ public class ServerDto {
         private List<MemberInfo> admins;
         private LocalTime resetTime;
         private String inviteCode;
+        private String description;
+        private Integer maxMembers;
+        private boolean resetPaused;
     }
 
     @Data @AllArgsConstructor
