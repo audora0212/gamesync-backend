@@ -33,6 +33,7 @@ public class ServerService {
     private final TimetableEntryRepository entryRepo;
     private final CustomGameRepository customGameRepo;
     private final AuditService auditService;
+    private final NotificationService notificationService;
     private final boolean AuditEnable=true; //감사로그 온오프
     private final ServerInviteRepository inviteRepo;
     private final FriendshipRepository friendshipRepository;
@@ -254,6 +255,14 @@ public class ServerService {
                 .createdAt(java.time.LocalDateTime.now())
                 .build();
         inv = inviteRepo.save(inv);
+
+        // 알림: 초대 수신자에게 통지
+        notificationService.notify(
+                receiver,
+                com.example.scheduler.domain.NotificationType.INVITE,
+                "서버 초대",
+                String.format("%s님이 '%s' 서버로 초대했습니다.", sender.getNickname(), srv.getName())
+        );
 
         return toInviteDto(inv);
     }

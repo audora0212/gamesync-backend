@@ -25,6 +25,8 @@ public class TimetableService {
     private final UserRepository userRepo;
     private final DefaultGameRepository defaultGameRepo;
     private final CustomGameRepository customGameRepo;
+    private final NotificationService notificationService;
+    private final FriendshipRepository friendshipRepository;
 
     @Transactional
     public TimetableDto.EntryResponse add(TimetableDto.EntryRequest req) {
@@ -56,6 +58,8 @@ public class TimetableService {
         }
 
         entryRepo.save(e);
+        // 알림: 같은 서버의 내 친구들에게 통지
+        notifyFriendsInServer(user, srv, e);
         return toResp(e);
     }
 
@@ -145,5 +149,29 @@ public class TimetableService {
             r.setCustom(false);
         }
         return r;
+    }
+
+    private void notifyFriendsInServer(User actor, Server server, TimetableEntry entry) {
+        // actor의 친구 집합(양방향 저장 고려) 수집
+        var friendsA = friendshipRepository.findByUser(actor).stream().map(f -> f.getFriend()).toList();
+        var friendsB = friendshipRepository.findByFriend(actor).stream().map(f -> f.getUser()).toList();
+        java.util.Set<Long> friendIds = new java.util.HashSet<>();
+        friendsA.forEach(u -> friendIds.add(u.getId()));
+        friendsB.forEach(u -> friendIds.add(u.getId()));
+
+        // 같은 서버 멤버 중 친구에게만 알림
+        for (User m : server.getMembers()) {
+            if (!m.getId().equals(actor.getId()) && friendIds.contains(m.getId())) {
+                String gameName = (entry.getCustomGame() != null)
+                        ? entry.getCustomGame().getName()
+                        : entry.getDefaultGame().getName();
+                notificationService.notify(
+                        m,
+                        com.example.scheduler.domain.NotificationType.TIMETABLE,
+                        "친구의 스케줄 등록",
+                        String.format("%s님이 %s 서버에 %s 예약을 등록했습니다.", actor.getNickname(), server.getName(), gameName)
+                );
+            }
+        }
     }
 }
