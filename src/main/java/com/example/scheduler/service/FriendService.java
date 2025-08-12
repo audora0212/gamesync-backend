@@ -85,10 +85,11 @@ public class FriendService {
                 "{\"kind\":\"friend_request\",\"requestId\":%d,\"fromNickname\":\"%s\"}",
                 req.getId(), sender.getNickname()
         );
+        String title = String.format("%s님이 친구 요청을 보냈어요", sender.getNickname());
         notificationService.notify(
                 receiver,
                 com.example.scheduler.domain.NotificationType.GENERIC,
-                "친구 요청",
+                title + "\n" + "알림 패널에서 수락/거절할 수 있어요",
                 payload
         );
     }
@@ -109,21 +110,23 @@ public class FriendService {
         if (accept) {
             acceptInternal(req);
             // 발신자에게 수락 알림
+            String title = String.format("%s님이 친구 요청을 수락했어요", me.getNickname());
             notificationService.notify(
                     req.getSender(),
                     com.example.scheduler.domain.NotificationType.GENERIC,
-                    "친구 요청이 수락되었습니다",
-                    String.format("%s님이 친구 요청을 수락했습니다.", me.getNickname())
+                    title,
+                    null
             );
         } else {
             req.setStatus(FriendRequestStatus.REJECTED);
             requestRepository.save(req);
             // 발신자에게 거절 알림
+            String title = String.format("%s님이 친구 요청을 거절했어요", me.getNickname());
             notificationService.notify(
                     req.getSender(),
                     com.example.scheduler.domain.NotificationType.GENERIC,
-                    "친구 요청이 거절되었습니다",
-                    String.format("%s님이 친구 요청을 거절했습니다.", me.getNickname())
+                    title,
+                    null
             );
         }
 

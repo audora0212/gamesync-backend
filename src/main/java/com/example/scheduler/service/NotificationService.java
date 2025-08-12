@@ -23,6 +23,7 @@ public class NotificationService {
     private final NotificationRepository notificationRepository;
     private final UserRepository userRepository;
     private final com.example.scheduler.repository.FriendNotificationSettingRepository friendNotiRepo;
+    private final PushService pushService;
 
     private User currentUser() {
         String username = SecurityContextHolder.getContext().getAuthentication().getName();
@@ -43,6 +44,19 @@ public class NotificationService {
                 .createdAt(LocalDateTime.now())
                 .build();
         notificationRepository.save(n);
+        org.slf4j.LoggerFactory.getLogger(NotificationService.class)
+                .info("Saved notification id={} type={} toUserId={}", n.getId(), type, to.getId());
+
+        // 푸시 전송 (best-effort)
+        try {
+            java.util.HashMap<String, String> data = new java.util.HashMap<>();
+            data.put("type", type.name());
+            if (message != null) data.put("payload", message);
+            pushService.pushToUser(to, title, (message != null && message.length() <= 120) ? message : null, data);
+        } catch (Exception ignored) {
+            org.slf4j.LoggerFactory.getLogger(NotificationService.class)
+                    .warn("Push dispatch skipped due to exception");
+        }
     }
 
     public void notifyIfFriendEnabled(User owner, User friend, NotificationType type, String title, String message) {

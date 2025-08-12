@@ -285,10 +285,11 @@ public class ServerService {
                 "{\"kind\":\"server_invite\",\"inviteId\":%d,\"serverName\":\"%s\",\"fromNickname\":\"%s\"}",
                 inv.getId(), srv.getName(), sender.getNickname()
         );
+        String title = String.format("%s 서버로 초대가 왔어요", srv.getName());
         notificationService.notify(
                 receiver,
                 com.example.scheduler.domain.NotificationType.INVITE,
-                "서버 초대",
+                title + "\n" + String.format("%s님이 보냈습니다. 알림에서 확인하세요", sender.getNickname()),
                 invitePayload
         );
 
@@ -319,20 +320,22 @@ public class ServerService {
                 serverRepo.save(srv);
             }
             // 초대 발신자에게 수락 알림
+            String title = String.format("%s님이 %s 초대를 수락했어요", me.getNickname(), inv.getServer().getName());
             notificationService.notify(
                     inv.getSender(),
                     com.example.scheduler.domain.NotificationType.INVITE,
-                    "초대가 수락되었습니다",
-                    String.format("%s님이 '%s' 서버 초대를 수락했습니다.", me.getNickname(), inv.getServer().getName())
+                    title,
+                    null
             );
         } else {
             inv.setStatus(com.example.scheduler.domain.InviteStatus.REJECTED);
             // 초대 발신자에게 거절 알림
+            String title = String.format("%s님이 %s 초대를 거절했어요", me.getNickname(), inv.getServer().getName());
             notificationService.notify(
                     inv.getSender(),
                     com.example.scheduler.domain.NotificationType.INVITE,
-                    "초대가 거절되었습니다",
-                    String.format("%s님이 '%s' 서버 초대를 거절했습니다.", me.getNickname(), inv.getServer().getName())
+                    title,
+                    null
             );
         }
         inviteRepo.save(inv);
