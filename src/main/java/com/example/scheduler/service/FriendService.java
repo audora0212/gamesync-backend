@@ -86,12 +86,6 @@ public class FriendService {
                 req.getId(), sender.getNickname()
         );
         String title = String.format("%s님이 친구 요청을 보냈어요", sender.getNickname());
-        notificationService.notify(
-                receiver,
-                com.example.scheduler.domain.NotificationType.GENERIC,
-                title + "\n" + "알림 패널에서 수락/거절할 수 있어요",
-                payload
-        );
     }
 
     @Transactional
