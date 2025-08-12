@@ -6,6 +6,15 @@ build/
 !**/src/test/**/build/
 /src/main/resources/application.properties
 
+# Log files
+logs/
+log/
+*.log
+*.log.*
+*.out
+*.err
+spring.log
+
 ### STS ###
 .apt_generated
 .classpath

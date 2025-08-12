@@ -3,8 +3,8 @@ package com.example.scheduler.service;
 import com.example.scheduler.domain.PushToken;
 import com.example.scheduler.domain.User;
 import com.example.scheduler.repository.PushTokenRepository;
-import com.google.firebase.FirebaseApp;
 import com.google.firebase.messaging.FirebaseMessaging;
+import com.google.firebase.messaging.FirebaseMessagingException;
 import com.google.firebase.messaging.Message;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -51,38 +51,46 @@ public class PushService {
      * Fire-and-forget push; failures for invalid tokens should prune tokens eventually
      */
     public void pushToUser(User user, String title, String body, java.util.Map<String, String> data) {
+        var logger = org.slf4j.LoggerFactory.getLogger(PushService.class);
         if (firebaseApp == null || firebaseApp.isEmpty()) {
-            org.slf4j.LoggerFactory.getLogger(PushService.class)
-                    .warn("FirebaseApp not configured. Skipping push for userId={}", user.getId());
+            logger.warn("FirebaseApp not configured. Skipping push for userId={}", user.getId());
             return; // not configured
         }
         List<PushToken> tokens = tokenRepo.findByUser(user);
+        if (tokens == null || tokens.isEmpty()) {
+            logger.info("No FCM tokens for userId={}. Skipping.", user.getId());
+            return;
+        }
+
+        logger.info("Dispatching FCM to userId={}, tokenCount={}, title='{}'", user.getId(), tokens.size(), title);
         for (PushToken pt : tokens) {
             try {
                 Message message = Message.builder()
                         .setToken(pt.getToken())
                         .putAllData(data != null ? data : java.util.Collections.emptyMap())
-                        // Keep sending data-only so SW can still render; but also include body in data
                         .putData("title", title != null ? title : "GameSync")
                         .putData("body", body != null ? body : "")
                         .build();
 
                 String messageId = FirebaseMessaging.getInstance(firebaseApp.get()).send(message);
-                org.slf4j.LoggerFactory.getLogger(PushService.class)
-                        .info("Sent FCM to userId={}, tokenHash={}, messageId={}",
-                                user.getId(), Integer.toHexString(pt.getToken().hashCode()), messageId);
+                logger.info("FCM sent ok userId={}, platform={}, tokenHash={}, messageId={}",
+                        user.getId(), pt.getPlatform(), Integer.toHexString(pt.getToken().hashCode()), messageId);
             } catch (Exception ex) {
-                // InvalidRegistration, NotRegistered 등은 토큰 삭제로 정리 가능
                 String msg = ex.getMessage() == null ? "" : ex.getMessage();
-                if (msg.contains("registration-token-not-registered") || msg.contains("invalid-argument")) {
-                    tokenRepo.deleteByToken(pt.getToken());
-                    org.slf4j.LoggerFactory.getLogger(PushService.class)
-                            .warn("Removed invalid FCM token tokenHash={} cause={}",
-                                    Integer.toHexString(pt.getToken().hashCode()), msg);
+                if (ex instanceof FirebaseMessagingException fme) {
+                    logger.error("FCM failed userId={}, platform={}, tokenHash={}, code={}, msg={}",
+                            user.getId(), pt.getPlatform(), Integer.toHexString(pt.getToken().hashCode()),
+                            String.valueOf(fme.getErrorCode()), fme.getMessage());
+                } else {
+                    logger.error("FCM failed userId={}, platform={}, tokenHash={}, msg={}",
+                            user.getId(), pt.getPlatform(), Integer.toHexString(pt.getToken().hashCode()), msg);
                 }
-                org.slf4j.LoggerFactory.getLogger(PushService.class)
-                        .error("FCM send failed for userId={}, tokenHash={}, error={}",
-                                user.getId(), Integer.toHexString(pt.getToken().hashCode()), msg);
+
+                // InvalidRegistration, NotRegistered 등 토큰 정리
+                if (msg.contains("registration-token-not-registered") || msg.contains("invalid-argument") || msg.contains("UNREGISTERED")) {
+                    tokenRepo.deleteByToken(pt.getToken());
+                    logger.warn("Removed invalid FCM token tokenHash={}", Integer.toHexString(pt.getToken().hashCode()));
+                }
             }
         }
     }
