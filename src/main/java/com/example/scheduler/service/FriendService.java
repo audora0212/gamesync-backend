@@ -61,11 +61,6 @@ public class FriendService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "이미 친구다");
         }
 
-        // 기존 요청이 있는지 확인
-        requestRepository.findBySenderAndReceiver(sender, receiver).ifPresent(fr -> {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "이미 보낸 요청이 있다");
-        });
-
         // 상대가 보낸 대기중 요청이 있으면 바로 수락 처리하고 종료
         var oppositeOpt = requestRepository.findBySenderAndReceiver(receiver, sender);
         if (oppositeOpt.isPresent() && oppositeOpt.get().getStatus() == FriendRequestStatus.PENDING) {
@@ -73,12 +68,25 @@ public class FriendService {
             return;
         }
 
-        FriendRequest req = FriendRequest.builder()
-                .sender(sender)
-                .receiver(receiver)
-                .status(FriendRequestStatus.PENDING)
-                .build();
-        requestRepository.save(req);
+        // 기존 요청 확인: PENDING이면 차단, REJECTED면 재전송을 위해 PENDING으로 갱신
+        var existingOpt = requestRepository.findBySenderAndReceiver(sender, receiver);
+        FriendRequest req;
+        if (existingOpt.isPresent()) {
+            var existing = existingOpt.get();
+            if (existing.getStatus() == FriendRequestStatus.PENDING) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "이미 보낸 요청이 있다");
+            }
+            // REJECTED 등 처리된 요청은 상태를 PENDING으로 되돌려 재전송 허용
+            existing.setStatus(FriendRequestStatus.PENDING);
+            req = requestRepository.save(existing);
+        } else {
+            req = FriendRequest.builder()
+                    .sender(sender)
+                    .receiver(receiver)
+                    .status(FriendRequestStatus.PENDING)
+                    .build();
+            requestRepository.save(req);
+        }
 
         // 수신자에게 알림 (친구 요청)
         String payload = String.format(
