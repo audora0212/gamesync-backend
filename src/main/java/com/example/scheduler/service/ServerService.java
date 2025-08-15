@@ -265,24 +265,37 @@ public class ServerService {
         User receiver = userRepo.findById(receiverUserId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
 
+        // 이미 서버 멤버는 초대 불가
+        if (srv.getMembers().contains(receiver)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "이미 서버 멤버입니다");
+        }
+
         boolean areFriends = friendshipRepository.existsByUserAndFriend(sender, receiver)
                 || friendshipRepository.existsByUserAndFriend(receiver, sender);
         if (!areFriends)
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "친구만 초대 가능");
 
         var existing = inviteRepo.findByServerAndSenderAndReceiver(srv, sender, receiver);
-        if (existing.isPresent() && existing.get().getStatus() == com.example.scheduler.domain.InviteStatus.PENDING) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "이미 대기중 초대가 있습니다");
+        com.example.scheduler.domain.ServerInvite inv;
+        if (existing.isPresent()) {
+            var e = existing.get();
+            if (e.getStatus() == com.example.scheduler.domain.InviteStatus.PENDING) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "이미 대기중 초대가 있습니다");
+            }
+            // ACCEPTED/REJECTED 등 처리된 초대는 재전송을 위해 PENDING으로 갱신
+            e.setStatus(com.example.scheduler.domain.InviteStatus.PENDING);
+            e.setCreatedAt(java.time.LocalDateTime.now());
+            inv = inviteRepo.save(e);
+        } else {
+            inv = com.example.scheduler.domain.ServerInvite.builder()
+                    .server(srv)
+                    .sender(sender)
+                    .receiver(receiver)
+                    .status(com.example.scheduler.domain.InviteStatus.PENDING)
+                    .createdAt(java.time.LocalDateTime.now())
+                    .build();
+            inv = inviteRepo.save(inv);
         }
-
-        com.example.scheduler.domain.ServerInvite inv = com.example.scheduler.domain.ServerInvite.builder()
-                .server(srv)
-                .sender(sender)
-                .receiver(receiver)
-                .status(com.example.scheduler.domain.InviteStatus.PENDING)
-                .createdAt(java.time.LocalDateTime.now())
-                .build();
-        inv = inviteRepo.save(inv);
 
         // 알림: 초대 수신자에게 통지 (초대 ID를 payload 로 포함)
         String invitePayload = String.format(
