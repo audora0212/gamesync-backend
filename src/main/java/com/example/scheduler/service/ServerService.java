@@ -160,6 +160,9 @@ public class ServerService {
         if (srv.getOwner().equals(target))
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "서버장은 강퇴할 수 없습니다");
 
+        // 강퇴되는 사용자의 서버 내 타임테이블 기록 삭제
+        entryRepo.deleteAllByServerAndUser(srv, target);
+
         srv.getMembers().remove(target);
         srv.getAdmins().remove(target);
         serverRepo.save(srv);
