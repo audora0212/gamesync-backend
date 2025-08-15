@@ -117,6 +117,24 @@ public class ServerController {
         return ResponseEntity.ok(serverService.getDetail(id));
     }
 
+    /* ---------- 즐겨찾기 ---------- */
+    @PostMapping("/{id}/favorite")
+    public ResponseEntity<Void> favorite(@PathVariable Long id) {
+        serverService.favorite(id);
+        return ResponseEntity.noContent().build();
+    }
+
+    @DeleteMapping("/{id}/favorite")
+    public ResponseEntity<Void> unfavorite(@PathVariable Long id) {
+        serverService.unfavorite(id);
+        return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/favorites/mine")
+    public ResponseEntity<List<ServerDto.Response>> myFavorites() {
+        return ResponseEntity.ok(serverService.listMyFavorites());
+    }
+
     /* ---------- 초대 API ---------- */
     @PostMapping("/invites")
     public ResponseEntity<ServerDto.InviteResponse> createInvite(@RequestBody ServerDto.InviteCreateRequest req) {

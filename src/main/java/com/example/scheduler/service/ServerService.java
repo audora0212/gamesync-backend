@@ -36,6 +36,7 @@ public class ServerService {
     private final boolean AuditEnable=true; //감사로그 온오프
     private final ServerInviteRepository inviteRepo;
     private final FriendshipRepository friendshipRepository;
+    private final com.example.scheduler.repository.FavoriteServerRepository favoriteRepo;
 
     /* ---------- 생성 / 참가 ---------- */
 
@@ -403,5 +404,36 @@ public class ServerService {
                 inv.getStatus().name(),
                 inv.getCreatedAt()
         );
+    }
+
+    /* ---------- 즐겨찾기 ---------- */
+    @Transactional
+    public void favorite(Long serverId) {
+        User me = currentUser();
+        Server srv = fetch(serverId);
+        if (!srv.getMembers().contains(me))
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "서버 멤버만 즐겨찾기 가능");
+        favoriteRepo.findByUserAndServer(me, srv)
+                .orElseGet(() -> favoriteRepo.save(
+                        com.example.scheduler.domain.FavoriteServer.builder()
+                                .user(me)
+                                .server(srv)
+                                .build()
+                ));
+    }
+
+    @Transactional
+    public void unfavorite(Long serverId) {
+        User me = currentUser();
+        Server srv = fetch(serverId);
+        favoriteRepo.findByUserAndServer(me, srv)
+                .ifPresent(fav -> favoriteRepo.delete(fav));
+    }
+
+    public List<ServerDto.Response> listMyFavorites() {
+        User me = currentUser();
+        return favoriteRepo.findByUser(me).stream()
+                .map(fs -> toDto(fs.getServer()))
+                .collect(Collectors.toList());
     }
 }
