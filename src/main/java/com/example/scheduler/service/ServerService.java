@@ -21,7 +21,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
-import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -64,8 +63,8 @@ public class ServerService {
         Server srv = Server.builder()
                 .name(req.getName())
                 .owner(owner)
-                .members(Set.of(owner))
-                .admins(Set.of(owner))
+                .members(new java.util.HashSet<>(java.util.Set.of(owner)))
+                .admins(new java.util.HashSet<>(java.util.Set.of(owner)))
                 .resetTime(req.getResetTime())
                 .inviteCode(code)
                 .build();
@@ -149,6 +148,7 @@ public class ServerService {
 
     /* ---------- 관리자 기능 ---------- */
 
+    @Transactional
     public ServerDto.Response kick(Long id, ServerDto.KickRequest req) {
         Server srv = fetch(id);
         User me = currentUser();
