@@ -221,6 +221,16 @@ public class FriendService {
                 .collect(Collectors.toList());
         return new FriendDto.PendingListResponse(requests);
     }
+
+    /** 양방향 친구 관계 삭제 */
+    @Transactional
+    public void deleteFriend(String username, Long friendUserId) {
+        User me = getUserByUsernameOr404(username);
+        User friend = getUserOr404(friendUserId);
+        // 양방향 모두 삭제 (한쪽만 저장된 경우도 대비)
+        friendshipRepository.deleteByUserAndFriend(me, friend);
+        friendshipRepository.deleteByUserAndFriend(friend, me);
+    }
 }
 
 

@@ -50,6 +50,13 @@ public class FriendController {
     public ResponseEntity<FriendDto.PendingListResponse> listPendingSent(Authentication auth) {
         return ResponseEntity.ok(friendService.listPendingSent(auth.getName()));
     }
+
+    /* ---------- 친구 삭제 ---------- */
+    @DeleteMapping("/{friendUserId}")
+    public ResponseEntity<Void> deleteFriend(Authentication auth, @PathVariable Long friendUserId) {
+        friendService.deleteFriend(auth.getName(), friendUserId);
+        return ResponseEntity.noContent().build();
+    }
 }
 
 
