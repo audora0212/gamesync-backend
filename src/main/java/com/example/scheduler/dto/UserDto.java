@@ -41,4 +41,24 @@ public class UserDto {
         private String friendNickname;
         private Boolean enabled;
     }
+
+    // 푸시 설정 응답
+    @Data @AllArgsConstructor
+    public static class PushSettingsResponse {
+        private Boolean pushAllEnabled;
+        private Boolean pushInviteEnabled;
+        private Boolean pushFriendRequestEnabled;
+        private Boolean pushFriendScheduleEnabled;
+        private Boolean panelFriendScheduleEnabled;
+    }
+
+    // 푸시 설정 갱신 요청 (null이면 변경 없음)
+    @Data
+    public static class UpdatePushSettingsRequest {
+        private Boolean pushAllEnabled;
+        private Boolean pushInviteEnabled;
+        private Boolean pushFriendRequestEnabled;
+        private Boolean pushFriendScheduleEnabled;
+        private Boolean panelFriendScheduleEnabled;
+    }
 }

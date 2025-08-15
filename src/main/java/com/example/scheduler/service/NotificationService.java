@@ -35,27 +35,55 @@ public class NotificationService {
         // 알림 설정 off면 무시
         if (Boolean.FALSE.equals(to.getNotificationsEnabled())) return;
 
-        Notification n = Notification.builder()
-                .user(to)
-                .type(type)
-                .title(title)
-                .message(message)
-                .read(false)
-                .createdAt(LocalDateTime.now())
-                .build();
-        notificationRepository.save(n);
-        org.slf4j.LoggerFactory.getLogger(NotificationService.class)
-                .info("Saved notification id={} type={} toUserId={}", n.getId(), type, to.getId());
+        // 친구 스케줄 등록의 경우, panelFriendScheduleEnabled=true일 때만 저장형 알림 생성
+        boolean skipPanel = false;
+        if (type == NotificationType.TIMETABLE) {
+            // 이제 친구 스케줄 등록 패널 표시는 pushFriendScheduleEnabled 값과 동일하게 동작
+            Boolean on = to.getPushFriendScheduleEnabled();
+            // null 또는 true => 표시(ON)
+            skipPanel = Boolean.FALSE.equals(on);
+        }
+        Notification n = null;
+        if (!skipPanel) {
+            n = Notification.builder()
+                    .user(to)
+                    .type(type)
+                    .title(title)
+                    .message(message)
+                    .read(false)
+                    .createdAt(LocalDateTime.now())
+                    .build();
+            notificationRepository.save(n);
+            org.slf4j.LoggerFactory.getLogger(NotificationService.class)
+                    .info("Saved notification id={} type={} toUserId={}", n.getId(), type, to.getId());
+        }
 
-        // 푸시 전송 (best-effort)
+        // 푸시 전송 (best-effort) - 카테고리별 on/off 적용
         try {
+            java.util.HashMap<String, String> data = new java.util.HashMap<>();
+            data.put("type", type.name());
+            if (message != null) data.put("payload", message);
+            boolean allow = allowPush(to, type);
+            if (allow) {
+                pushService.pushToUser(to, title, (message != null && message.length() <= 120) ? message : null, data);
+            }
+        } catch (Exception ignored) {
+            org.slf4j.LoggerFactory.getLogger(NotificationService.class)
+                    .warn("Push dispatch skipped due to exception");
+        }
+    }
+
+    /** 저장형 알림을 생성하지 않고 FCM만 전송한다 (벨 패널 비표시). */
+    public void notifyPushOnly(User to, NotificationType type, String title, String message) {
+        try {
+            if (!allowPush(to, type)) return;
             java.util.HashMap<String, String> data = new java.util.HashMap<>();
             data.put("type", type.name());
             if (message != null) data.put("payload", message);
             pushService.pushToUser(to, title, (message != null && message.length() <= 120) ? message : null, data);
         } catch (Exception ignored) {
             org.slf4j.LoggerFactory.getLogger(NotificationService.class)
-                    .warn("Push dispatch skipped due to exception");
+                    .warn("Push-only dispatch skipped due to exception");
         }
     }
 
@@ -66,6 +94,16 @@ public class NotificationService {
                 .orElse(true);
         if (!enabled) return;
         notify(owner, type, title, message);
+    }
+
+    /** 친구별 on/off와 전체 설정을 준수하면서, 저장형 알림 없이 FCM만 전송 */
+    public void notifyPushOnlyIfFriendEnabled(User owner, User friend, NotificationType type, String title, String message) {
+        if (Boolean.FALSE.equals(owner.getNotificationsEnabled())) return;
+        boolean enabled = friendNotiRepo.findByOwnerAndFriend(owner, friend)
+                .map(com.example.scheduler.domain.FriendNotificationSetting::isEnabled)
+                .orElse(true);
+        if (!enabled) return;
+        notifyPushOnly(owner, type, title, message);
     }
 
     @Transactional(readOnly = true)
@@ -129,6 +167,17 @@ public class NotificationService {
     public void deleteMineByMessageFragment(NotificationType type, String messageFragment) {
         User me = currentUser();
         notificationRepository.deleteByUserAndTypeAndMessageContaining(me, type, messageFragment);
+    }
+
+    private boolean allowPush(User to, NotificationType type) {
+        // 전체 스위치가 false면 모든 FCM 차단
+        if (Boolean.FALSE.equals(to.getPushAllEnabled())) return false;
+        // 타입별 스위치
+        return switch (type) {
+            case INVITE -> !Boolean.FALSE.equals(to.getPushInviteEnabled());
+            case GENERIC -> !Boolean.FALSE.equals(to.getPushFriendRequestEnabled());
+            case TIMETABLE -> !Boolean.FALSE.equals(to.getPushFriendScheduleEnabled());
+        };
     }
 }
 

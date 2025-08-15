@@ -110,6 +110,45 @@ public class UserService {
         )).toList();
     }
 
+    public UserDto.PushSettingsResponse getPushSettings(String username) {
+        User u = userRepository.findByUsername(username)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        return new UserDto.PushSettingsResponse(
+                u.getPushAllEnabled(),
+                u.getPushInviteEnabled(),
+                u.getPushFriendRequestEnabled(),
+                u.getPushFriendScheduleEnabled(),
+                // 패널 표시는 pushFriendScheduleEnabled와 동일 취급
+                u.getPushFriendScheduleEnabled()
+        );
+    }
+
+    public UserDto.PushSettingsResponse updatePushSettings(String username, UserDto.UpdatePushSettingsRequest req) {
+        User u = userRepository.findByUsername(username)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        // 전체 스위치 우선 처리: 켬/끔 시 하위도 동일하게 설정
+        if (req.getPushAllEnabled() != null) {
+            boolean on = Boolean.TRUE.equals(req.getPushAllEnabled());
+            u.setPushAllEnabled(on);
+            u.setPushInviteEnabled(on);
+            u.setPushFriendRequestEnabled(on);
+            u.setPushFriendScheduleEnabled(on);
+        }
+        if (req.getPushInviteEnabled() != null) u.setPushInviteEnabled(Boolean.TRUE.equals(req.getPushInviteEnabled()));
+        if (req.getPushFriendRequestEnabled() != null) u.setPushFriendRequestEnabled(Boolean.TRUE.equals(req.getPushFriendRequestEnabled()));
+        if (req.getPushFriendScheduleEnabled() != null) u.setPushFriendScheduleEnabled(Boolean.TRUE.equals(req.getPushFriendScheduleEnabled()));
+        if (req.getPanelFriendScheduleEnabled() != null) u.setPanelFriendScheduleEnabled(Boolean.TRUE.equals(req.getPanelFriendScheduleEnabled()));
+        userRepository.save(u);
+        return new UserDto.PushSettingsResponse(
+                u.getPushAllEnabled(),
+                u.getPushInviteEnabled(),
+                u.getPushFriendRequestEnabled(),
+                u.getPushFriendScheduleEnabled(),
+                // 패널 표시는 동일
+                u.getPushFriendScheduleEnabled()
+        );
+    }
+
     /** 현재 로그인 사용자의 디스코드 연동 해제 */
     public void unlinkDiscordCurrentUser() {
         String username = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication().getName();

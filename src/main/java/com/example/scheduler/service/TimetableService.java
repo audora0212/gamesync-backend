@@ -165,6 +165,7 @@ public class TimetableService {
                 String gameName = (entry.getCustomGame() != null)
                         ? entry.getCustomGame().getName()
                         : entry.getDefaultGame().getName();
+                // 패널 표시 여부는 사용자 설정에 따라 NotificationService에서 결정
                 notificationService.notifyIfFriendEnabled(
                         m, // owner(수신자)
                         actor, // friend(발신자)

@@ -70,4 +70,21 @@ public class UserController {
         String username = auth.getName();
         return ResponseEntity.ok(userService.listFriendNotificationSettings(username));
     }
+
+    // FCM 푸시 카테고리 설정 조회
+    @GetMapping("/push-settings")
+    public ResponseEntity<UserDto.PushSettingsResponse> getPushSettings(Authentication auth) {
+        String username = auth.getName();
+        return ResponseEntity.ok(userService.getPushSettings(username));
+    }
+
+    // FCM 푸시 카테고리 설정 갱신 (null 필드는 변경 없음)
+    @PutMapping("/push-settings")
+    public ResponseEntity<UserDto.PushSettingsResponse> updatePushSettings(
+            Authentication auth,
+            @RequestBody UserDto.UpdatePushSettingsRequest req
+    ) {
+        String username = auth.getName();
+        return ResponseEntity.ok(userService.updatePushSettings(username, req));
+    }
 }
