@@ -93,15 +93,18 @@ public class NotificationService {
     @Transactional
     public void clearAllMine() {
         User me = currentUser();
-        // 서버 초대(INVITE)와 친구 요청(GENERIC + payload kind=friend_request)은 보존
+        // 서버 초대 중 실제 초대(payload에 kind=server_invite 포함)와 친구 요청만 보존
         var all = notificationRepository.findByUserOrderByCreatedAtDesc(me);
         java.util.List<Long> deletableIds = new java.util.ArrayList<>();
         for (var n : all) {
-            boolean isServerInvite = n.getType() == NotificationType.INVITE;
+            boolean isActionableServerInvite = n.getType() == NotificationType.INVITE
+                    && n.getMessage() != null
+                    && n.getMessage().contains("\"kind\":\"server_invite\"");
             boolean isFriendRequest = n.getType() == NotificationType.GENERIC
                     && n.getMessage() != null
                     && n.getMessage().contains("\"kind\":\"friend_request\"");
-            if (!(isServerInvite || isFriendRequest)) {
+            // 수락 알림 등 payload 없는 INVITE 메시지는 삭제 대상으로 간주
+            if (!(isActionableServerInvite || isFriendRequest)) {
                 deletableIds.add(n.getId());
             }
         }
