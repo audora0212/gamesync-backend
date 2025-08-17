@@ -27,6 +27,7 @@ public class PartyService {
     private final CustomGameRepository customGameRepo;
     private final TimetableService timetableService;
     private final NotificationService notificationService;
+    private final TimetableEntryRepository timetableEntryRepository;
 
     private User currentUser() {
         return userRepo.findByUsername(SecurityContextHolder.getContext().getAuthentication().getName())
@@ -59,11 +60,10 @@ public class PartyService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Game ID is required");
         }
 
-        // 생성자는 자동 참가
+        // 우선 파티를 저장
         Party saved = partyRepo.save(p);
-        saved.getParticipants().add(user);
 
-        // 생성자의 타임테이블에도 등록
+        // 생성자의 타임테이블 먼저 등록 (파티 참가 이전에 수행하여 파티 참가중 가드에 걸리지 않도록 함)
         TimetableDto.EntryRequest tReq = new TimetableDto.EntryRequest();
         tReq.setServerId(saved.getServer().getId());
         tReq.setSlot(saved.getSlot());
@@ -73,6 +73,9 @@ public class PartyService {
             tReq.setDefaultGameId(saved.getDefaultGame().getId());
         }
         timetableService.add(tReq);
+
+        // 생성자는 자동 참가
+        saved.getParticipants().add(user);
 
         // 서버 모든 멤버에게 파티 모집 알림 (소유자 제외 가능)
         for (User m : server.getMembers()) {
@@ -195,10 +198,18 @@ public class PartyService {
         if (!party.getCreator().getId().equals(me.getId())) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN);
         }
+        // 파티 삭제 시 참가자들의 해당 서버 스케줄 제거
+        if (party.getParticipants() != null && !party.getParticipants().isEmpty()) {
+            Server server = party.getServer();
+            for (User u : party.getParticipants()) {
+                timetableEntryRepository.deleteAllByServerAndUser(server, u);
+            }
+        }
         partyRepo.delete(party);
     }
 
     // Wrapper to satisfy certain call sites if needed
+    @Transactional
     public void deletePartyEndpoint(Long partyId) {
         deleteParty(partyId);
     }

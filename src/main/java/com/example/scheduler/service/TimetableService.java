@@ -27,6 +27,7 @@ public class TimetableService {
     private final CustomGameRepository customGameRepo;
     private final NotificationService notificationService;
     private final FriendshipRepository friendshipRepository;
+    private final PartyRepository partyRepository;
 
     @Transactional
     public TimetableDto.EntryResponse add(TimetableDto.EntryRequest req) {
@@ -35,6 +36,11 @@ public class TimetableService {
         ).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
         Server srv = serverRepo.findById(req.getServerId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+
+        // 파티에 참가 중이면 스케줄 신규 등록 금지
+        if (partyRepository.existsByServerAndParticipantsContaining(srv, user)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "현재 파티에 참가 중입니다. 파티를 떠난 후 예약해 주세요.");
+        }
 
         entryRepo.findByServerAndUser(srv, user)
                 .ifPresent(entryRepo::delete);
