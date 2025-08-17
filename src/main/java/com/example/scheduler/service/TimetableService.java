@@ -134,6 +134,16 @@ public class TimetableService {
         return new TimetableDto.StatsResponse(topGame, avgSlot, peakSlot, peakCount);
     }
 
+    @Transactional
+    public void deleteByServerAndCurrentUser(Long serverId) {
+        User user = userRepo.findByUsername(
+                SecurityContextHolder.getContext().getAuthentication().getName()
+        ).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        Server srv = serverRepo.findById(serverId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        entryRepo.deleteAllByServerAndUser(srv, user);
+    }
+
     private TimetableDto.EntryResponse toResp(TimetableEntry e) {
         TimetableDto.EntryResponse r = new TimetableDto.EntryResponse();
         r.setId(e.getId());

@@ -90,6 +90,16 @@ public class PartyService {
         Party party = partyRepo.findById(partyId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
 
+        // 하나의 유저는 하나의 파티만 참가 가능: 기존 참가 파티 탈퇴
+        List<Party> myParties = partyRepo.findByParticipantsContaining(user);
+        for (Party p : myParties) {
+            if (!p.getId().equals(party.getId())) {
+                if (p.getParticipants() != null) p.getParticipants().remove(user);
+                // 기존 서버에서 내 스케줄 삭제
+                removeMyTimetableEntry(p.getServer(), user);
+            }
+        }
+
         if (party.getParticipants().contains(user)) {
             return toResp(party);
         }
@@ -110,6 +120,30 @@ public class PartyService {
 
         party.getParticipants().add(user);
         return toResp(party);
+    }
+
+    @Transactional
+    public PartyDto.Response leaveParty(Long partyId) {
+        User user = currentUser();
+        Party party = partyRepo.findById(partyId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+
+        if (party.getParticipants() != null) {
+            party.getParticipants().remove(user);
+        }
+
+        // 해당 서버에서 내 스케줄 삭제
+        // 한 서버당 하나만 유지되는 정책이므로 서버-유저 조합 모두 삭제
+        removeMyTimetableEntry(party.getServer(), user);
+
+        return toResp(party);
+    }
+
+    private void removeMyTimetableEntry(Server server, User user) {
+        // TimetableService에 공개 메서드가 없으므로 repository를 직접 사용하도록 서비스에 위임하는 메서드를 추가하는 것이 이상적이나,
+        // 현재 의존성 구성을 유지하기 위해 TimetableService에 helper를 추가하는 대신, repository를 PartyService에 주입하는 것은 구조상 좋지 않습니다.
+        // 간단히 TimetableService에 메서드가 있다고 가정하고 위임합니다. (아래에서 실제 메서드 추가)
+        timetableService.deleteByServerAndCurrentUser(server.getId());
     }
 
     private PartyDto.Response toResp(Party party) {
@@ -135,6 +169,10 @@ public class PartyService {
                 .map(User::getNickname)
                 .collect(Collectors.toSet());
         r.setParticipantNames(names);
+        try {
+            User me = currentUser();
+            r.setJoined(party.getParticipants() != null && party.getParticipants().contains(me));
+        } catch (Exception ignore) { }
         return r;
     }
 }

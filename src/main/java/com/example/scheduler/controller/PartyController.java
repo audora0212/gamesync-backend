@@ -29,6 +29,11 @@ public class PartyController {
     public ResponseEntity<PartyDto.Response> join(@PathVariable Long serverId, @PathVariable Long partyId) {
         return ResponseEntity.ok(partyService.join(partyId));
     }
+
+    @PostMapping("/{partyId}/leave")
+    public ResponseEntity<PartyDto.Response> leave(@PathVariable Long serverId, @PathVariable Long partyId) {
+        return ResponseEntity.ok(partyService.leaveParty(partyId));
+    }
 }
 
 

@@ -32,6 +32,7 @@ public class PartyDto {
         private int participants;
         private boolean full;
         private Set<String> participantNames;
+        private boolean joined;
     }
 }
 
