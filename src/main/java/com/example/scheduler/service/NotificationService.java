@@ -63,9 +63,35 @@ public class NotificationService {
             java.util.HashMap<String, String> data = new java.util.HashMap<>();
             data.put("type", type.name());
             if (message != null) data.put("payload", message);
+            // Body 정규화: JSON payload인 경우 사람 친화적 문구로 변환
+            String pushBody = null;
+            if (message != null) {
+                String trimmed = message.trim();
+                if (trimmed.startsWith("{") && trimmed.endsWith("}")) {
+                    try {
+                        com.fasterxml.jackson.databind.JsonNode node = new com.fasterxml.jackson.databind.ObjectMapper().readTree(trimmed);
+                        String kind = node.has("kind") ? node.get("kind").asText(null) : null;
+                        if ("friend_request".equals(kind)) {
+                            String from = node.has("fromNickname") ? node.get("fromNickname").asText("상대방") : "상대방";
+                            pushBody = "친구패널에서 수락/거절할 수 있어요";
+                        } else if ("server_invite".equals(kind)) {
+                            String from = node.has("fromNickname") ? node.get("fromNickname").asText("상대방") : "상대방";
+                            String serverName = node.has("serverName") ? node.get("serverName").asText("") : "";
+                            pushBody = from + " → " + serverName;
+                        } else {
+                            pushBody = message;
+                        }
+                    } catch (Exception ignore) {
+                        pushBody = message;
+                    }
+                } else {
+                    pushBody = message;
+                }
+            }
             boolean allow = allowPush(to, type);
             if (allow) {
-                pushService.pushToUser(to, title, (message != null && message.length() <= 120) ? message : null, data);
+                String bodyToSend = (pushBody != null && pushBody.length() <= 120) ? pushBody : null;
+                pushService.pushToUser(to, title, bodyToSend, data);
             }
         } catch (Exception ignored) {
             org.slf4j.LoggerFactory.getLogger(NotificationService.class)
