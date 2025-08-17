@@ -50,6 +50,7 @@ public class UserDto {
         private Boolean pushFriendRequestEnabled;
         private Boolean pushFriendScheduleEnabled;
         private Boolean panelFriendScheduleEnabled;
+        private Boolean pushPartyEnabled;
     }
 
     // 푸시 설정 갱신 요청 (null이면 변경 없음)
@@ -60,5 +61,6 @@ public class UserDto {
         private Boolean pushFriendRequestEnabled;
         private Boolean pushFriendScheduleEnabled;
         private Boolean panelFriendScheduleEnabled;
+        private Boolean pushPartyEnabled;
     }
 }

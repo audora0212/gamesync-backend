@@ -177,6 +177,7 @@ public class NotificationService {
             case INVITE -> !Boolean.FALSE.equals(to.getPushInviteEnabled());
             case GENERIC -> !Boolean.FALSE.equals(to.getPushFriendRequestEnabled());
             case TIMETABLE -> !Boolean.FALSE.equals(to.getPushFriendScheduleEnabled());
+            case PARTY -> !Boolean.FALSE.equals(to.getPushPartyEnabled());
         };
     }
 }

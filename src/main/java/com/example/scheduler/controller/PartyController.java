@@ -34,6 +34,12 @@ public class PartyController {
     public ResponseEntity<PartyDto.Response> leave(@PathVariable Long serverId, @PathVariable Long partyId) {
         return ResponseEntity.ok(partyService.leaveParty(partyId));
     }
+
+    @DeleteMapping("/{partyId}")
+    public ResponseEntity<Void> delete(@PathVariable Long serverId, @PathVariable Long partyId) {
+        partyService.deletePartyEndpoint(partyId);
+        return ResponseEntity.noContent().build();
+    }
 }
 
 

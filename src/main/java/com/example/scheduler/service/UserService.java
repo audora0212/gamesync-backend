@@ -119,7 +119,8 @@ public class UserService {
                 u.getPushFriendRequestEnabled(),
                 u.getPushFriendScheduleEnabled(),
                 // 패널 표시는 pushFriendScheduleEnabled와 동일 취급
-                u.getPushFriendScheduleEnabled()
+                u.getPushFriendScheduleEnabled(),
+                u.getPushPartyEnabled()
         );
     }
 
@@ -133,11 +134,13 @@ public class UserService {
             u.setPushInviteEnabled(on);
             u.setPushFriendRequestEnabled(on);
             u.setPushFriendScheduleEnabled(on);
+            u.setPushPartyEnabled(on);
         }
         if (req.getPushInviteEnabled() != null) u.setPushInviteEnabled(Boolean.TRUE.equals(req.getPushInviteEnabled()));
         if (req.getPushFriendRequestEnabled() != null) u.setPushFriendRequestEnabled(Boolean.TRUE.equals(req.getPushFriendRequestEnabled()));
         if (req.getPushFriendScheduleEnabled() != null) u.setPushFriendScheduleEnabled(Boolean.TRUE.equals(req.getPushFriendScheduleEnabled()));
         if (req.getPanelFriendScheduleEnabled() != null) u.setPanelFriendScheduleEnabled(Boolean.TRUE.equals(req.getPanelFriendScheduleEnabled()));
+        if (req.getPushPartyEnabled() != null) u.setPushPartyEnabled(Boolean.TRUE.equals(req.getPushPartyEnabled()));
         userRepository.save(u);
         return new UserDto.PushSettingsResponse(
                 u.getPushAllEnabled(),
@@ -145,7 +148,8 @@ public class UserService {
                 u.getPushFriendRequestEnabled(),
                 u.getPushFriendScheduleEnabled(),
                 // 패널 표시는 동일
-                u.getPushFriendScheduleEnabled()
+                u.getPushFriendScheduleEnabled(),
+                u.getPushPartyEnabled()
         );
     }
 

@@ -26,6 +26,7 @@ public class PartyService {
     private final DefaultGameRepository defaultGameRepo;
     private final CustomGameRepository customGameRepo;
     private final TimetableService timetableService;
+    private final NotificationService notificationService;
 
     private User currentUser() {
         return userRepo.findByUsername(SecurityContextHolder.getContext().getAuthentication().getName())
@@ -72,6 +73,15 @@ public class PartyService {
             tReq.setDefaultGameId(saved.getDefaultGame().getId());
         }
         timetableService.add(tReq);
+
+        // 서버 모든 멤버에게 파티 모집 알림 (소유자 제외 가능)
+        for (User m : server.getMembers()) {
+            if (m.getId().equals(user.getId())) continue;
+            String gameName = (saved.getCustomGame() != null) ? saved.getCustomGame().getName() : saved.getDefaultGame().getName();
+            String title = "파티 모집";
+            String msg = String.format("%s님이 %s에서 %s 파티를 모집합니다 (%d명)", user.getNickname(), server.getName(), gameName, saved.getCapacity());
+            notificationService.notify(m, com.example.scheduler.domain.NotificationType.PARTY, title, msg);
+        }
 
         return toResp(saved);
     }
@@ -172,8 +182,25 @@ public class PartyService {
         try {
             User me = currentUser();
             r.setJoined(party.getParticipants() != null && party.getParticipants().contains(me));
+            r.setOwner(party.getCreator() != null && party.getCreator().getId().equals(me.getId()));
         } catch (Exception ignore) { }
         return r;
+    }
+
+    @Transactional
+    public void deleteParty(Long partyId) {
+        User me = currentUser();
+        Party party = partyRepo.findById(partyId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        if (!party.getCreator().getId().equals(me.getId())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN);
+        }
+        partyRepo.delete(party);
+    }
+
+    // Wrapper to satisfy certain call sites if needed
+    public void deletePartyEndpoint(Long partyId) {
+        deleteParty(partyId);
     }
 }
 

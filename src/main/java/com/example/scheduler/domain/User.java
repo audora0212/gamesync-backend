@@ -63,6 +63,11 @@ public class User {
     @Column(nullable = true)
     private Boolean panelFriendScheduleEnabled = true;
 
+    // 파티 모집 푸시 on/off (기본 true)
+    @Builder.Default
+    @Column(nullable = true)
+    private Boolean pushPartyEnabled = true;
+
     /** 마지막 닉네임 변경 시각 (24시간 제한 용도) */
     @Column(name = "nickname_changed_at")
     private LocalDateTime nicknameChangedAt;
