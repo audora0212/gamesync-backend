@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.*;
 
 @Entity
+@Table(name = "custom_games")
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
 public class CustomGame {
     @Id

@@ -8,6 +8,7 @@ import java.time.LocalTime;
 import java.util.Set;
 
 @Entity
+@Table(name = "servers")
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
 public class Server {
 

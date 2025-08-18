@@ -5,6 +5,7 @@ import lombok.*;
 import java.time.LocalDateTime;
 
 @Entity
+@Table(name = "timetable_entries")
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
 public class TimetableEntry {
     @Id
