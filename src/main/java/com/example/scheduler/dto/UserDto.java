@@ -51,6 +51,8 @@ public class UserDto {
         private Boolean pushFriendScheduleEnabled;
         private Boolean panelFriendScheduleEnabled;
         private Boolean pushPartyEnabled;
+        private Boolean pushMyTimetableReminderEnabled;
+        private Integer myTimetableReminderMinutes;
     }
 
     // 푸시 설정 갱신 요청 (null이면 변경 없음)
@@ -62,5 +64,7 @@ public class UserDto {
         private Boolean pushFriendScheduleEnabled;
         private Boolean panelFriendScheduleEnabled;
         private Boolean pushPartyEnabled;
+        private Boolean pushMyTimetableReminderEnabled;
+        private Integer myTimetableReminderMinutes;
     }
 }

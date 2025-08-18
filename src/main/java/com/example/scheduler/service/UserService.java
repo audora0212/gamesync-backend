@@ -120,7 +120,9 @@ public class UserService {
                 u.getPushFriendScheduleEnabled(),
                 // 패널 표시는 pushFriendScheduleEnabled와 동일 취급
                 u.getPushFriendScheduleEnabled(),
-                u.getPushPartyEnabled()
+                u.getPushPartyEnabled(),
+                u.getPushMyTimetableReminderEnabled(),
+                u.getMyTimetableReminderMinutes()
         );
     }
 
@@ -141,6 +143,8 @@ public class UserService {
         if (req.getPushFriendScheduleEnabled() != null) u.setPushFriendScheduleEnabled(Boolean.TRUE.equals(req.getPushFriendScheduleEnabled()));
         if (req.getPanelFriendScheduleEnabled() != null) u.setPanelFriendScheduleEnabled(Boolean.TRUE.equals(req.getPanelFriendScheduleEnabled()));
         if (req.getPushPartyEnabled() != null) u.setPushPartyEnabled(Boolean.TRUE.equals(req.getPushPartyEnabled()));
+        if (req.getPushMyTimetableReminderEnabled() != null) u.setPushMyTimetableReminderEnabled(Boolean.TRUE.equals(req.getPushMyTimetableReminderEnabled()));
+        if (req.getMyTimetableReminderMinutes() != null) u.setMyTimetableReminderMinutes(req.getMyTimetableReminderMinutes());
         userRepository.save(u);
         return new UserDto.PushSettingsResponse(
                 u.getPushAllEnabled(),
@@ -149,7 +153,9 @@ public class UserService {
                 u.getPushFriendScheduleEnabled(),
                 // 패널 표시는 동일
                 u.getPushFriendScheduleEnabled(),
-                u.getPushPartyEnabled()
+                u.getPushPartyEnabled(),
+                u.getPushMyTimetableReminderEnabled(),
+                u.getMyTimetableReminderMinutes()
         );
     }
 
