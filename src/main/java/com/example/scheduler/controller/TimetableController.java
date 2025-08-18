@@ -34,4 +34,10 @@ public class TimetableController {
     public ResponseEntity<TimetableDto.StatsResponse> stats(@PathVariable Long serverId) {
         return ResponseEntity.ok(timetableService.stats(serverId));
     }
+
+    @DeleteMapping
+    public ResponseEntity<Void> deleteMyEntry(@PathVariable Long serverId) {
+        timetableService.deleteByServerAndCurrentUser(serverId);
+        return ResponseEntity.noContent().build();
+    }
 }
