@@ -10,6 +10,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.security.Key;
+import java.nio.charset.StandardCharsets;
 import java.util.Date;
 
 @Component
@@ -28,7 +29,13 @@ public class JwtTokenProvider {
 
     @PostConstruct
     public void init() {
-        byte[] keyBytes = Decoders.BASE64.decode(secretBase64);
+        byte[] keyBytes;
+        try {
+            keyBytes = Decoders.BASE64.decode(secretBase64);
+        } catch (IllegalArgumentException e) {
+            // Fallback: treat as plain text secret when not Base64-encoded
+            keyBytes = secretBase64.getBytes(StandardCharsets.UTF_8);
+        }
         this.key = Keys.hmacShaKeyFor(keyBytes);
     }
 

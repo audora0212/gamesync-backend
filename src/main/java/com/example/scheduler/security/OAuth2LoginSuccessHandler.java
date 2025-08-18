@@ -23,13 +23,13 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
     private final UserRepository    userRepo;
     private final ObjectMapper      objectMapper = new ObjectMapper();
 
-    @Value("${app.frontend.base-url}")
+    @Value("${app.frontend.base-url:http://localhost:3000}")
     private String frontendBaseUrl;
 
-    @Value("${app.frontend.discord-callback-path}")
+    @Value("${app.frontend.discord-callback-path:/auth/discord/callback}")
     private String discordCallbackPath;
 
-    @Value("${app.frontend.kakao-callback-path}")
+    @Value("${app.frontend.kakao-callback-path:/auth/kakao/callback}")
     private String kakaoCallbackPath;
 
     public OAuth2LoginSuccessHandler(JwtTokenProvider jwtProvider,

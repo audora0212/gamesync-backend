@@ -22,7 +22,7 @@ import java.util.List;
 @Configuration
 public class SecurityConfig {
 
-    @Value("${app.cors.allowed-origins}")
+    @Value("${app.cors.allowed-origins:}")
     private String allowedOrigins;
 
     private final JwtTokenProvider tokenProvider;
