@@ -7,6 +7,7 @@ import com.google.firebase.messaging.FirebaseMessaging;
 import com.google.firebase.messaging.FirebaseMessagingException;
 import com.google.firebase.messaging.Message;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -17,8 +18,8 @@ import java.util.List;
 @RequiredArgsConstructor
 public class PushService {
     private final PushTokenRepository tokenRepo;
-    // FirebaseApp may be null if not configured; treat as optional
-    private final java.util.Optional<com.google.firebase.FirebaseApp> firebaseApp;
+    // Lazily resolve FirebaseApp if present (optional)
+    private final ObjectProvider<com.google.firebase.FirebaseApp> firebaseAppProvider;
 
     @Transactional
     public void registerToken(User user, String token, String platform) {
@@ -52,7 +53,8 @@ public class PushService {
      */
     public void pushToUser(User user, String title, String body, java.util.Map<String, String> data) {
         var logger = org.slf4j.LoggerFactory.getLogger(PushService.class);
-        if (firebaseApp == null || firebaseApp.isEmpty()) {
+        com.google.firebase.FirebaseApp app = firebaseAppProvider.getIfAvailable();
+        if (app == null) {
             logger.warn("FirebaseApp not configured. Skipping push for userId={}", user.getId());
             return; // not configured
         }
@@ -72,7 +74,7 @@ public class PushService {
                         .putData("body", body != null ? body : "")
                         .build();
 
-                String messageId = FirebaseMessaging.getInstance(firebaseApp.get()).send(message);
+                String messageId = FirebaseMessaging.getInstance(app).send(message);
                 logger.info("FCM sent ok userId={}, platform={}, tokenHash={}, messageId={}",
                         user.getId(), pt.getPlatform(), Integer.toHexString(pt.getToken().hashCode()), messageId);
             } catch (Exception ex) {
