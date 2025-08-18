@@ -3,7 +3,6 @@ package com.example.scheduler.security;
 
 import com.example.scheduler.domain.User;
 import com.example.scheduler.repository.UserRepository;
-import com.example.scheduler.security.JwtTokenProvider;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -30,6 +29,9 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
     @Value("${app.frontend.discord-callback-path}")
     private String discordCallbackPath;
 
+    @Value("${app.frontend.kakao-callback-path}")
+    private String kakaoCallbackPath;
+
     public OAuth2LoginSuccessHandler(JwtTokenProvider jwtProvider,
                                      UserRepository userRepo) {
         this.jwtProvider = jwtProvider;
@@ -43,10 +45,16 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
             Authentication      auth) throws IOException {
 
         OAuth2User oauthUser = (OAuth2User) auth.getPrincipal();
-        String discordId     = oauthUser.getAttribute("id");
+        String provider = oauthUser.getAttribute("provider");
+        String externalId = oauthUser.getAttribute("id");
 
-        User user = userRepo.findByDiscordId(discordId)
-                .orElseThrow();
+        User user;
+        if ("kakao".equalsIgnoreCase(provider)) {
+            user = userRepo.findByKakaoId(externalId).orElseThrow();
+        } else {
+            user = userRepo.findByDiscordId(externalId).orElseThrow();
+            provider = "discord";
+        }
 
         String token = jwtProvider.createToken(user.getUsername());
 
@@ -58,10 +66,11 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
         String encodedUser = URLEncoder.encode(userJson, StandardCharsets.UTF_8);
 
         // properties 로 뺀 값 사용
+        String callbackPath = "discord".equalsIgnoreCase(provider) ? discordCallbackPath : kakaoCallbackPath;
         String redirectUrl = String.format(
                 "%s%s?token=%s&user=%s",
-                frontendBaseUrl, //  내 아이피 ~~~
-                discordCallbackPath,
+                frontendBaseUrl,
+                callbackPath,
                 token,
                 encodedUser
         );

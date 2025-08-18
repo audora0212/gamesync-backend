@@ -1,7 +1,6 @@
 package com.example.scheduler.security;
 
-import com.example.scheduler.repository.UserRepository;
-import com.example.scheduler.service.DiscordOAuth2UserService;
+import com.example.scheduler.service.CustomOAuth2UserService;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -28,12 +27,12 @@ public class SecurityConfig {
 
     private final JwtTokenProvider tokenProvider;
     private final org.springframework.security.core.userdetails.UserDetailsService userDetailsService;
-    private final DiscordOAuth2UserService oauth2UserService;
+    private final CustomOAuth2UserService oauth2UserService;
     private final OAuth2LoginSuccessHandler oauth2SuccessHandler;
 
     public SecurityConfig(JwtTokenProvider tokenProvider,
                           org.springframework.security.core.userdetails.UserDetailsService userDetailsService,
-                          DiscordOAuth2UserService oauth2UserService,
+                          CustomOAuth2UserService oauth2UserService,
                           OAuth2LoginSuccessHandler oauth2SuccessHandler) {
         this.tokenProvider = tokenProvider;
         this.userDetailsService = userDetailsService;
@@ -77,7 +76,7 @@ public class SecurityConfig {
                         .redirectionEndpoint(r -> r
                                 .baseUri("/login/oauth2/code/*")
                         )
-                        // DiscordOAuth2UserService 주입
+                        // OAuth2UserService 주입 (Discord, Kakao 공용)
                         .userInfoEndpoint(u -> u
                                 .userService(oauth2UserService)
                         )

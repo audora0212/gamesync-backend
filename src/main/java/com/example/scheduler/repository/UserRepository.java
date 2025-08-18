@@ -12,6 +12,9 @@ public interface UserRepository extends JpaRepository<User, Long> {
     // OAuth용 Discord ID 조회 추가
     Optional<User> findByDiscordId(String discordId);
 
+    // OAuth용 Kakao ID 조회 추가
+    Optional<User> findByKakaoId(String kakaoId);
+
       // 친구코드 조회/중복체크
       Optional<User> findByFriendCode(String friendCode);
       boolean existsByFriendCode(String friendCode);
