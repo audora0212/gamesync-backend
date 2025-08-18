@@ -3,6 +3,7 @@ package com.example.scheduler.security;
 import com.example.scheduler.service.CustomOAuth2UserService;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
@@ -18,6 +19,7 @@ import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import java.util.List;
+import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
 
 @Configuration
 public class SecurityConfig {
@@ -29,15 +31,18 @@ public class SecurityConfig {
     private final org.springframework.security.core.userdetails.UserDetailsService userDetailsService;
     private final CustomOAuth2UserService oauth2UserService;
     private final OAuth2LoginSuccessHandler oauth2SuccessHandler;
+    private final ObjectProvider<ClientRegistrationRepository> clientRegistrationRepositoryProvider;
 
     public SecurityConfig(JwtTokenProvider tokenProvider,
                           org.springframework.security.core.userdetails.UserDetailsService userDetailsService,
                           CustomOAuth2UserService oauth2UserService,
-                          OAuth2LoginSuccessHandler oauth2SuccessHandler) {
+                          OAuth2LoginSuccessHandler oauth2SuccessHandler,
+                          ObjectProvider<ClientRegistrationRepository> clientRegistrationRepositoryProvider) {
         this.tokenProvider = tokenProvider;
         this.userDetailsService = userDetailsService;
         this.oauth2UserService = oauth2UserService;
         this.oauth2SuccessHandler = oauth2SuccessHandler;
+        this.clientRegistrationRepositoryProvider = clientRegistrationRepositoryProvider;
     }
 
     @Bean
@@ -64,27 +69,20 @@ public class SecurityConfig {
                         ).permitAll()
                         .anyRequest().authenticated()
                 )
-                // OAuth2 로그인 설정
-                .oauth2Login(oauth2 -> oauth2
-                        // 커스텀 로그인 페이지 (Next.js)
-                        .loginPage("/auth/login")
-                        // authorization 요청 엔드포인트
-                        .authorizationEndpoint(a -> a
-                                .baseUri("/oauth2/authorization")
-                        )
-                        // 콜백 엔드포인트
-                        .redirectionEndpoint(r -> r
-                                .baseUri("/login/oauth2/code/*")
-                        )
-                        // OAuth2UserService 주입 (Discord, Kakao 공용)
-                        .userInfoEndpoint(u -> u
-                                .userService(oauth2UserService)
-                        )
-                        // 성공 핸들러
-                        .successHandler(oauth2SuccessHandler)
-                )
                 // JWT 필터를 UsernamePasswordAuthenticationFilter 전에 등록
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
+
+        // OAuth2 클라이언트 설정이 있을 때만 oauth2Login 구성
+        ClientRegistrationRepository clientRepo = clientRegistrationRepositoryProvider.getIfAvailable();
+        if (clientRepo != null) {
+            http.oauth2Login(oauth2 -> oauth2
+                    .loginPage("/auth/login")
+                    .authorizationEndpoint(a -> a.baseUri("/oauth2/authorization"))
+                    .redirectionEndpoint(r -> r.baseUri("/login/oauth2/code/*"))
+                    .userInfoEndpoint(u -> u.userService(oauth2UserService))
+                    .successHandler(oauth2SuccessHandler)
+            );
+        }
 
         return http.build();
     }
