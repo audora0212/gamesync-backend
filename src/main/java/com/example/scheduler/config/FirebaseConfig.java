@@ -6,6 +6,7 @@ import com.google.firebase.FirebaseOptions;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.context.annotation.Configuration;
 
 import java.io.ByteArrayInputStream;
@@ -19,7 +20,7 @@ public class FirebaseConfig {
     private String serviceAccountJson; // Base64 또는 plain JSON 문자열
 
     @Bean
-    @ConditionalOnProperty(value = "firebase.service-account-json")
+    @ConditionalOnExpression("T(org.springframework.util.StringUtils).hasText('${firebase.service-account-json:}')")
     public FirebaseApp firebaseApp() throws IOException {
         if (!FirebaseApp.getApps().isEmpty()) {
             var app = FirebaseApp.getInstance();
