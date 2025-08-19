@@ -65,7 +65,10 @@ public class SecurityConfig {
                                 "/oauth2/**",
                                 "/login/oauth2/**",
                                 "/error",
-                                "/healthcheck"
+                                "/healthcheck",
+                                "/actuator/health",
+                                "/actuator/health/**",
+                                "/actuator/info"
                         ).permitAll()
                         .anyRequest().authenticated()
                 )
