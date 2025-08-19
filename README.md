@@ -222,11 +222,11 @@ src
 
 ## AWS 구성도(수정)
 
-![AWS 구성도(수정)](../aws구성도(수정).png)
+![AWS 구성도(수정)](./aws구성도%28수정%29.png)
 
 ## ERD
 
-![ERD](../erd.png)
+![ERD](./erd.png)
 
 ---
 
