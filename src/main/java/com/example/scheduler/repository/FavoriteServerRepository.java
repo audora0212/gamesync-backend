@@ -19,3 +19,6 @@ public interface FavoriteServerRepository extends JpaRepository<FavoriteServer, 
 
 
 
+
+
+

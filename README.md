@@ -1,4 +1,4 @@
-# GameSync Backend
+# GameSync Backend ✨
 
 > **최영찬 (Lead)** – 전체 아키텍처 설계, 인증/보안, 스케줄러, 중요 API 설계 및 구현
 > 
@@ -60,9 +60,9 @@ GameSync 백엔드는 게임 모임 주최자와 참여자 간에
 
 ## 기술 스택
 
-- **프레임워크:** Spring Boot 3.5.0 (Java 22)
+- **프레임워크:** Spring Boot 3.5.0 (Java 17)
 - **DB:** MySQL (AWS RDS)
-- **인증:** Spring Security, JWT, OAuth2 (Discord)
+- **인증:** Spring Security, JWT, OAuth2 (Discord, Kakao)
 - **ORM:** Spring Data JPA (Hibernate)
 - **스케줄링:** `@Scheduled` (`cron` 및 `fixedRate`)
 - **빌드:** Gradle Wrapper
@@ -77,18 +77,16 @@ GameSync 백엔드는 게임 모임 주최자와 참여자 간에
 src
 └─ main
    ├─ java/com/example/scheduler
-   │   ├─ config            # 보안·CORS·OAuth 설정
+   │   ├─ config            # 초기화, Firebase 등 구성
    │   ├─ controller        # REST API 엔드포인트
    │   ├─ dto               # Request/Response 객체
-   │   ├─ entity            # JPA 엔터티
-   │   ├─ exception         # 전역 예외 처리
+   │   ├─ domain            # JPA 엔터티
    │   ├─ repository        # Spring Data JPA 리포지토리
-   │   ├─ scheduler         # 토큰 정리·타임테이블 리셋 작업
-   │   ├─ security          # JWT 필터·유틸리티
+   │   ├─ scheduler         # 토큰 정리·타임테이블 리셋·리마인더
+   │   ├─ security          # JWT 필터·OAuth2 핸들러
    │   └─ service           # 비즈니스 로직
    └─ resources
-       ├─ application.properties
-       └─ logback.xml
+       └─ default_games.txt
 ```
 
 ---
@@ -132,6 +130,20 @@ spring.security.oauth2.client.provider.discord.authorization-uri=https://discord
 spring.security.oauth2.client.provider.discord.token-uri=https://discord.com/api/oauth2/token
 spring.security.oauth2.client.provider.discord.user-info-uri=https://discord.com/api/users/@me
 spring.security.oauth2.client.provider.discord.user-name-attribute=id
+ 
+# Kakao OAuth2
+spring.security.oauth2.client.registration.kakao.client-id=<CLIENT_ID>
+spring.security.oauth2.client.registration.kakao.client-secret=<CLIENT_SECRET>
+spring.security.oauth2.client.registration.kakao.redirect-uri={baseUrl}/login/oauth2/code/{registrationId}
+spring.security.oauth2.client.registration.kakao.authorization-grant-type=authorization_code
+spring.security.oauth2.client.registration.kakao.scope=profile_nickname,account_email
+spring.security.oauth2.client.provider.kakao.authorization-uri=https://kauth.kakao.com/oauth/authorize
+spring.security.oauth2.client.provider.kakao.token-uri=https://kauth.kakao.com/oauth/token
+spring.security.oauth2.client.provider.kakao.user-info-uri=https://kapi.kakao.com/v2/user/me
+spring.security.oauth2.client.provider.kakao.user-name-attribute=id
+ 
+# Firebase Admin (권장: 환경 변수 사용)
+# GOOGLE_APPLICATION_CREDENTIALS=/absolute/path/to/service-account.json
 ```
 
 ---
@@ -147,6 +159,14 @@ java -jar build/libs/gamesync-backend-0.0.1-SNAPSHOT.jar
 
 # 개발 모드
 ./gradlew bootRun
+```
+
+Windows(PowerShell/명령 프롬프트):
+
+```bat
+gradlew.bat clean build
+java -jar build\libs\gamesync-backend-0.0.1-SNAPSHOT.jar
+gradlew.bat bootRun
 ```
 
 ---
@@ -175,6 +195,13 @@ java -jar build/libs/gamesync-backend-0.0.1-SNAPSHOT.jar
 | POST   | `/api/servers/{id}/kick`       | `{ userId }` → 멤버 강퇴               |
 | POST   | `/api/servers/{id}/admins`     | `{ userId, grant }` → 관리자 임명/해제 |
 
+### 즐겨찾기
+
+| 메서드 | 경로                                | 설명 |
+| ------ | ----------------------------------- | ---- |
+| GET    | `/api/servers/favorites`            | 즐겨찾기 목록 |
+| POST   | `/api/servers/{id}/favorite/toggle` | 즐겨찾기 토글 |
+
 ### 게임
 
 | 메서드 | 경로                                              | 설명                             |
@@ -192,6 +219,26 @@ java -jar build/libs/gamesync-backend-0.0.1-SNAPSHOT.jar
 | POST   | `/api/servers/{id}/timetable`       | `{ slot, defaultGameId?, customGameId? }` → 예약 등록 |
 | GET    | `/api/servers/{id}/timetable/stats` | 서버별 예약 통계 조회                                    |
 
+### 친구
+
+| 메서드 | 경로                          | 설명 |
+| ------ | ----------------------------- | ---- |
+| GET    | `/api/friends`                | 친구 목록 |
+| POST   | `/api/friends/request`        | 친구 요청 |
+| POST   | `/api/friends/accept`         | 친구 수락 |
+| POST   | `/api/friends/reject`         | 친구 거절 |
+| DELETE | `/api/friends/{friendUserId}` | 친구 삭제 |
+
+### 파티
+
+| 메서드 | 경로                           | 설명 |
+| ------ | ------------------------------ | ---- |
+| GET    | `/api/servers/{id}/parties`    | 파티 목록 |
+| POST   | `/api/servers/{id}/parties`    | 파티 생성 |
+| POST   | `/api/parties/{partyId}/join`  | 파티 참가 |
+| POST   | `/api/parties/{partyId}/leave` | 파티 탈퇴 |
+| DELETE | `/api/parties/{partyId}`       | 파티 삭제 |
+
 ---
 
 ## 스케줄러 작업
@@ -204,6 +251,10 @@ java -jar build/libs/gamesync-backend-0.0.1-SNAPSHOT.jar
 
   - Fixed Rate: 60초 (`@Scheduled(fixedRate = 60000)`)
   - 설명: 서버별 `resetTime` 도달 시 해당 서버의 모든 타임테이블 엔트리 초기화
+ - **TimetableReminderScheduler**
+ 
+   - Fixed Rate: 60초
+   - 설명: 사용자 설정된 N분 전 합류시간 푸시 리마인더 발송(저장형 알림 미생성)
 
 ---
 
