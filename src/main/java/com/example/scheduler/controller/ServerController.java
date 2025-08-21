@@ -34,8 +34,8 @@ public class ServerController {
         return ResponseEntity.ok(serverService.create(req));
     }
 
-    @PostMapping("/{id}/join")
-    public ResponseEntity<ServerDto.Response> join(@PathVariable Long id) {
+    @PostMapping("/{id:\\d+}/join")
+    public ResponseEntity<ServerDto.Response> join(@PathVariable("id") Long id) {
         return ResponseEntity.ok(serverService.join(id));
     }
 
@@ -44,65 +44,70 @@ public class ServerController {
         return ResponseEntity.ok(serverService.joinByCode(code));
     }
 
-    @PutMapping("/{id}/reset-time")
+    @GetMapping("/lookup")
+    public ResponseEntity<ServerDto.Response> lookupByCode(@RequestParam String code) {
+        return ResponseEntity.ok(serverService.lookupByCode(code));
+    }
+
+    @PutMapping("/{id:\\d+}/reset-time")
     public ResponseEntity<ServerDto.Response> updateResetTime(
-            @PathVariable Long id,
+            @PathVariable("id") Long id,
             @RequestBody ServerDto.UpdateResetTimeRequest req) {
         return ResponseEntity.ok(serverService.updateResetTime(id, req));
     }
 
-    @PutMapping("/{id}/name")
+    @PutMapping("/{id:\\d+}/name")
     public ResponseEntity<ServerDto.Response> rename(
-            @PathVariable Long id,
+            @PathVariable("id") Long id,
             @RequestBody ServerDto.UpdateNameRequest req) {
         return ResponseEntity.ok(serverService.rename(id, req));
     }
 
-    @PutMapping("/{id}/description")
+    @PutMapping("/{id:\\d+}/description")
     public ResponseEntity<ServerDto.Response> updateDescription(
-            @PathVariable Long id,
+            @PathVariable("id") Long id,
             @RequestBody ServerDto.UpdateDescriptionRequest req) {
         return ResponseEntity.ok(serverService.updateDescription(id, req));
     }
 
-    @PutMapping("/{id}/max-members")
+    @PutMapping("/{id:\\d+}/max-members")
     public ResponseEntity<ServerDto.Response> updateMaxMembers(
-            @PathVariable Long id,
+            @PathVariable("id") Long id,
             @RequestBody ServerDto.UpdateMaxMembersRequest req) {
         return ResponseEntity.ok(serverService.updateMaxMembers(id, req));
     }
 
-    @PutMapping("/{id}/reset-paused")
+    @PutMapping("/{id:\\d+}/reset-paused")
     public ResponseEntity<ServerDto.Response> toggleResetPaused(
-            @PathVariable Long id,
+            @PathVariable("id") Long id,
             @RequestBody ServerDto.ToggleResetPausedRequest req) {
         return ResponseEntity.ok(serverService.toggleResetPaused(id, req));
     }
 
-    @PostMapping("/{id}/kick")
+    @PostMapping("/{id:\\d+}/kick")
     public ResponseEntity<ServerDto.Response> kick(
-            @PathVariable Long id,
+            @PathVariable("id") Long id,
             @RequestBody ServerDto.KickRequest req) {
         return ResponseEntity.ok(serverService.kick(id, req));
     }
 
-    @PostMapping("/{id}/admins")
+    @PostMapping("/{id:\\d+}/admins")
     public ResponseEntity<ServerDto.Response> updateAdmin(
-            @PathVariable Long id,
+            @PathVariable("id") Long id,
             @RequestBody ServerDto.AdminRequest req) {
         return ResponseEntity.ok(serverService.updateAdmin(id, req));
     }
 
     // 서버 삭제
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Void> delete(@PathVariable Long id) {
+    @DeleteMapping("/{id:\\d+}")
+    public ResponseEntity<Void> delete(@PathVariable("id") Long id) {
         serverService.delete(id);
         return ResponseEntity.noContent().build();
     }
 
     // 서버 떠나기
-    @PostMapping("/{id}/leave")
-    public ResponseEntity<Void> leave(@PathVariable Long id) {
+    @PostMapping("/{id:\\d+}/leave")
+    public ResponseEntity<Void> leave(@PathVariable("id") Long id) {
         serverService.leave(id);
         return ResponseEntity.noContent().build();
     }
@@ -112,8 +117,8 @@ public class ServerController {
         return ResponseEntity.ok(serverService.list());
     }
 
-    @GetMapping("/{id}")
-    public ResponseEntity<ServerDto.Response> detail(@PathVariable Long id) {
+    @GetMapping("/{id:\\d+}")
+    public ResponseEntity<ServerDto.Response> detail(@PathVariable("id") Long id) {
         return ResponseEntity.ok(serverService.getDetail(id));
     }
 

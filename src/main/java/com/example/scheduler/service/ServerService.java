@@ -103,6 +103,13 @@ public class ServerService {
         return toDto(srv);
     }
 
+    /** 초대코드로 서버 기본정보 조회 (가입 전 확인용) */
+    public ServerDto.Response lookupByCode(String code) {
+        Server srv = serverRepo.findByInviteCode(code)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid code"));
+        return toDto(srv);
+    }
+
     /* ---------- 일반 수정 ---------- */
 
     public ServerDto.Response updateResetTime(Long id, ServerDto.UpdateResetTimeRequest req) {
