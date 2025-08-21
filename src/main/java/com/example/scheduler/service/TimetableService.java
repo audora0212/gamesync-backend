@@ -28,6 +28,7 @@ public class TimetableService {
     private final NotificationService notificationService;
     private final FriendshipRepository friendshipRepository;
     private final PartyRepository partyRepository;
+    private final AuditService auditService;
 
     @Transactional
     public TimetableDto.EntryResponse add(TimetableDto.EntryRequest req) {
@@ -64,6 +65,11 @@ public class TimetableService {
         }
 
         entryRepo.save(e);
+        // 감사 로그: 스케줄 등록 기록 (집계용: game,slot 포함)
+        try {
+            String details = String.format("game=%s;slot=%s", safeGameName(e), e.getSlot().toString());
+            auditService.log(srv.getId(), user.getId(), "TIMETABLE_REGISTER", details);
+        } catch (Exception ignored) {}
         // 알림: 같은 서버의 내 친구들에게 통지
         notifyFriendsInServer(user, srv, e);
         return toResp(e);
@@ -191,5 +197,11 @@ public class TimetableService {
                 );
             }
         }
+    }
+
+    private String safeGameName(TimetableEntry entry) {
+        if (entry.getCustomGame() != null) return entry.getCustomGame().getName();
+        if (entry.getDefaultGame() != null) return entry.getDefaultGame().getName();
+        return "";
     }
 }
