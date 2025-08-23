@@ -75,6 +75,12 @@ public class SecurityConfig {
                 // JWT 필터를 UsernamePasswordAuthenticationFilter 전에 등록
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
 
+        // 인증 필요 자원 접근 시 302 리다이렉트 대신 401/403 상태 코드 반환
+        http.exceptionHandling(e -> e
+                .authenticationEntryPoint((req, res, ex) -> res.sendError(401))
+                .accessDeniedHandler((req, res, ex) -> res.sendError(403))
+        );
+
         // OAuth2 클라이언트 설정이 있을 때만 oauth2Login 구성
         ClientRegistrationRepository clientRepo = clientRegistrationRepositoryProvider.getIfAvailable();
         if (clientRepo != null) {
