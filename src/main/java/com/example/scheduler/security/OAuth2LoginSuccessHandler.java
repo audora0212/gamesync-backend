@@ -79,7 +79,7 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
                     .orElse(null);
         }
 
-        // 기본: 웹 콜백
+        // 기본: 웹 콜백 (단, 모바일 UA에서는 스킴을 기본으로 폴백)
         String finalUrl = String.format("%s%s?token=%s&user=%s", frontendBaseUrl, callbackPath, token, encodedUser);
         System.out.println("[OAuth2Success] provider=" + provider + " userId=" + user.getId());
         System.out.println("[OAuth2Success] target=" + oauthTarget + " redirect=" + finalUrl);
@@ -100,6 +100,12 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
                 case "web":
                 default:
                     break;
+            }
+        } else {
+            // 쿠키가 없는 경우: iOS/모바일 UA면 스킴으로 폴백
+            String ua = req.getHeader("User-Agent");
+            if (ua != null && (ua.contains("iPhone") || ua.contains("iPad") || ua.contains("iPod") || ua.contains("Mobile"))) {
+                finalUrl = String.format("gamesync:///auth/%s/callback?token=%s&user=%s", provider, token, encodedUser);
             }
         }
 
