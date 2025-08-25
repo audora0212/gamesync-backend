@@ -87,10 +87,9 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
         if (oauthTarget != null) {
             switch (oauthTarget) {
                 case "app":
-                    // iOS 유니버설 링크로 통일하여 Safari -> 앱 자동 전환 유도
-                    finalUrl = String.format("%s%s?token=%s&user=%s",
-                            frontendBaseUrl,
-                            callbackPath,
+                    // 커스텀 스킴으로 즉시 앱 복귀 (UL 문제 회피)
+                    finalUrl = String.format("gamesync:///auth/%s/callback?token=%s&user=%s",
+                            provider,
                             token,
                             encodedUser);
                     break;
