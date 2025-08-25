@@ -81,6 +81,10 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
                     .findFirst()
                     .orElse(null);
         }
+        // Debug: UA / cookie dump
+        String uaHdr = req.getHeader("User-Agent");
+        System.out.println("[OAuth2Success] UA=" + uaHdr);
+        System.out.println("[OAuth2Success] oauth_target_cookie=" + oauthTarget);
 
         // 기본: 웹 콜백 (단, 모바일 UA에서는 스킴을 기본으로 폴백)
         String finalUrl = String.format("%s%s?token=%s&user=%s", frontendBaseUrl, callbackPath, token, encodedUser);
@@ -108,7 +112,7 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
         } else {
             // 쿠키가 없는 경우: iOS/모바일 UA면 스킴으로 폴백
             String ua = req.getHeader("User-Agent");
-            if (ua != null && (ua.contains("iPhone") || ua.contains("iPad") || ua.contains("iPod") || ua.contains("Mobile"))) {
+            if (ua != null && (ua.contains("iPhone") || ua.contains("iPad") || ua.contains("iPod") || ua.contains("Mobile") || ua.contains("Safari"))) {
                 finalUrl = String.format("%s/auth/%s/callback?token=%s&user=%s",
                         iosScheme.replaceAll("/$", ""),
                         provider,
