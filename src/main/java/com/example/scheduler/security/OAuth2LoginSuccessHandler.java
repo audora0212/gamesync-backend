@@ -87,11 +87,10 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
         if (oauthTarget != null) {
             switch (oauthTarget) {
                 case "app":
-                    // 커스텀 스킴으로 앱 복귀를 확실히 시도
-                    // 프론트의 딥링크 파서가 pathname이 '/auth/{provider}/callback' 형태를 기대하므로
-                    // 커스텀 스킴은 'gamesync:///auth/{provider}/callback' (슬래시 3개)로 생성한다.
-                    finalUrl = String.format("gamesync:///auth/%s/callback?token=%s&user=%s",
-                            provider,
+                    // iOS 유니버설 링크로 통일하여 Safari -> 앱 자동 전환 유도
+                    finalUrl = String.format("%s%s?token=%s&user=%s",
+                            frontendBaseUrl,
+                            callbackPath,
                             token,
                             encodedUser);
                     break;
