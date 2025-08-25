@@ -88,7 +88,10 @@ public class SecurityConfig {
         if (clientRepo != null) {
             http.oauth2Login(oauth2 -> oauth2
                     .loginPage("/auth/login")
-                    .authorizationEndpoint(a -> a.baseUri("/oauth2/authorization"))
+                    .authorizationEndpoint(a -> a
+                            .baseUri("/oauth2/authorization")
+                            .authorizationRequestRepository(new CookieOAuth2AuthorizationRequestRepository())
+                    )
                     .redirectionEndpoint(r -> r.baseUri("/login/oauth2/code/*"))
                     .userInfoEndpoint(u -> u.userService(oauth2UserService))
                     .successHandler(oauth2SuccessHandler)
