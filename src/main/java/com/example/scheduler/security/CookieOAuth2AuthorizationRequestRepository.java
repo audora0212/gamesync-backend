@@ -68,6 +68,9 @@ public class CookieOAuth2AuthorizationRequestRepository implements Authorization
         // When served via HTTPS, mark as secure; ALB terminates TLS, but header rewriting preserves secure flag to client
         cookie.setSecure(true);
         response.addCookie(cookie);
+        // Explicitly add SameSite=None; Secure attribute for Safari (Set-Cookie header API workaround)
+        String setCookieHeader = String.format("%s=%s; Max-Age=%d; Path=/; HttpOnly; Secure; SameSite=None", name, value, maxAge);
+        response.addHeader("Set-Cookie", setCookieHeader);
     }
 
     private void deleteCookie(HttpServletRequest request, HttpServletResponse response, String name) {
@@ -77,6 +80,7 @@ public class CookieOAuth2AuthorizationRequestRepository implements Authorization
         cookie.setHttpOnly(true);
         cookie.setSecure(true);
         response.addCookie(cookie);
+        response.addHeader("Set-Cookie", name + "=; Max-Age=0; Path=/; HttpOnly; Secure; SameSite=None");
     }
 
     private String serialize(OAuth2AuthorizationRequest obj) {
