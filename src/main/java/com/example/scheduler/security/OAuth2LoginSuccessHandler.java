@@ -16,6 +16,7 @@ import java.io.IOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
+import java.util.Arrays;
 
 @Component
 public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
@@ -67,13 +68,43 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
 
         // properties 로 뺀 값 사용
         String callbackPath = "discord".equalsIgnoreCase(provider) ? discordCallbackPath : kakaoCallbackPath;
-        String redirectUrl = String.format(
-                "%s%s?token=%s&user=%s",
-                frontendBaseUrl,
-                callbackPath,
-                token,
-                encodedUser
-        );
-        res.sendRedirect(redirectUrl);
+
+        // oauth_target 쿠키 값(app | mobile-web | web)에 따라 최종 목적지를 분기
+        String oauthTarget = null;
+        if (req.getCookies() != null) {
+            oauthTarget = Arrays.stream(req.getCookies())
+                    .filter(c -> "oauth_target".equals(c.getName()))
+                    .map(jakarta.servlet.http.Cookie::getValue)
+                    .findFirst()
+                    .orElse(null);
+        }
+
+        // 기본: 웹 콜백
+        String finalUrl = String.format("%s%s?token=%s&user=%s", frontendBaseUrl, callbackPath, token, encodedUser);
+
+        if (oauthTarget != null) {
+            switch (oauthTarget) {
+                case "app":
+                    // 유니버설 링크 권장: 앱이 설치되어 있으면 열리고, 없으면 웹으로 열림
+                    // 필요 시 커스텀 스킴(gamesync://)로 교체 가능
+                    finalUrl = String.format("%s%s?token=%s&user=%s", "https://gamesync.cloud", callbackPath, token, encodedUser);
+                    break;
+                case "mobile-web":
+                    // 웹 콜백 유지: 프론트에서 앱 열기 시도 후 스토어 폴백 처리
+                    break;
+                case "web":
+                default:
+                    break;
+            }
+        }
+
+        // 사용 후 쿠키 만료(클라이언트 지시)
+        jakarta.servlet.http.Cookie expired = new jakarta.servlet.http.Cookie("oauth_target", "");
+        expired.setMaxAge(0);
+        expired.setPath("/");
+        // SameSite, Secure 등은 Set-Cookie 헤더에 추가해야 하지만 표준 Cookie API로는 제한적
+        res.addCookie(expired);
+
+        res.sendRedirect(finalUrl);
     }
 }
