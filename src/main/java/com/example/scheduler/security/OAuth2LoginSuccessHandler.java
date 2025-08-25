@@ -86,7 +86,9 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
             switch (oauthTarget) {
                 case "app":
                     // 커스텀 스킴으로 앱 복귀를 확실히 시도
-                    finalUrl = String.format("gamesync://auth/%s/callback?token=%s&user=%s",
+                    // 프론트의 딥링크 파서가 pathname이 '/auth/{provider}/callback' 형태를 기대하므로
+                    // 커스텀 스킴은 'gamesync:///auth/{provider}/callback' (슬래시 3개)로 생성한다.
+                    finalUrl = String.format("gamesync:///auth/%s/callback?token=%s&user=%s",
                             provider,
                             token,
                             encodedUser);
