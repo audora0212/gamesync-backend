@@ -81,6 +81,8 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
 
         // 기본: 웹 콜백
         String finalUrl = String.format("%s%s?token=%s&user=%s", frontendBaseUrl, callbackPath, token, encodedUser);
+        System.out.println("[OAuth2Success] provider=" + provider + " userId=" + user.getId());
+        System.out.println("[OAuth2Success] target=" + oauthTarget + " redirect=" + finalUrl);
 
         if (oauthTarget != null) {
             switch (oauthTarget) {
