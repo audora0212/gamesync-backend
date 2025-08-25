@@ -45,15 +45,35 @@ public class CustomOAuth2UserService implements OAuth2UserService<OAuth2UserRequ
 		String username = oauthUser.getAttribute("username");
 		String email = oauthUser.getAttribute("email");
 
-		User user = userRepository.findByDiscordId(discordId).orElseGet(() -> {
-			User u = new User();
-			u.setDiscordId(discordId);
-			u.setUsername(username);
-			u.setNickname(username);
-			u.setEmail(email);
-			u.setFriendCode(friendCodeService.generateUniqueFriendCode());
-			return userRepository.save(u);
-		});
+		// 1) discordId로 기존 연동 계정이 있으면 사용
+		User user = userRepository.findByDiscordId(discordId).orElse(null);
+
+		// 2) 없으면 이메일로 기존 계정 찾아 discordId를 연결
+		if (user == null && email != null && !email.isBlank()) {
+			user = userRepository.findByEmail(email).orElse(null);
+			if (user != null) {
+				user.setDiscordId(discordId);
+				if (user.getNickname() == null || user.getNickname().isBlank()) {
+					user.setNickname(username);
+				}
+				if (user.getFriendCode() == null || user.getFriendCode().isBlank()) {
+					user.setFriendCode(friendCodeService.generateUniqueFriendCode());
+				}
+				userRepository.save(user);
+			}
+		}
+
+		// 3) 그래도 없으면 신규 생성 (username 고유성 보장)
+		if (user == null) {
+			String uniqueUsername = (discordId != null && !discordId.isBlank()) ? ("discord_" + discordId) : (username != null ? username : "discord_user");
+			user = new User();
+			user.setDiscordId(discordId);
+			user.setUsername(uniqueUsername);
+			user.setNickname(username != null ? username : uniqueUsername);
+			user.setEmail(email);
+			user.setFriendCode(friendCodeService.generateUniqueFriendCode());
+			user = userRepository.save(user);
+		}
 
 		boolean dirty = false;
 		if (email != null && !email.equals(user.getEmail())) {

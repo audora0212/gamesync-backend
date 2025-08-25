@@ -15,6 +15,9 @@ public interface UserRepository extends JpaRepository<User, Long> {
     // OAuth용 Kakao ID 조회 추가
     Optional<User> findByKakaoId(String kakaoId);
 
+    // 이메일로 기존 사용자 조회 (OAuth 계정 연동 시 사용)
+    Optional<User> findByEmail(String email);
+
       // 친구코드 조회/중복체크
       Optional<User> findByFriendCode(String friendCode);
       boolean existsByFriendCode(String friendCode);
