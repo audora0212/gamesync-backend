@@ -85,9 +85,11 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
         if (oauthTarget != null) {
             switch (oauthTarget) {
                 case "app":
-                    // 유니버설 링크 권장: 앱이 설치되어 있으면 열리고, 없으면 웹으로 열림
-                    // 필요 시 커스텀 스킴(gamesync://)로 교체 가능
-                    finalUrl = String.format("%s%s?token=%s&user=%s", "https://gamesync.cloud", callbackPath, token, encodedUser);
+                    // 커스텀 스킴으로 앱 복귀를 확실히 시도
+                    finalUrl = String.format("gamesync://auth/%s/callback?token=%s&user=%s",
+                            provider,
+                            token,
+                            encodedUser);
                     break;
                 case "mobile-web":
                     // 웹 콜백 유지: 프론트에서 앱 열기 시도 후 스토어 폴백 처리
