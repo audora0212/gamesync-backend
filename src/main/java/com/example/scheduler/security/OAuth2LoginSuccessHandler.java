@@ -88,8 +88,6 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
 
         // 기본: 웹 콜백 (단, 모바일 UA에서는 스킴을 기본으로 폴백)
         String finalUrl = String.format("%s%s?token=%s&user=%s", frontendBaseUrl, callbackPath, token, encodedUser);
-        System.out.println("[OAuth2Success] provider=" + provider + " userId=" + user.getId());
-        System.out.println("[OAuth2Success] target=" + oauthTarget + " redirect=" + finalUrl);
 
         if (oauthTarget != null) {
             switch (oauthTarget) {
@@ -120,6 +118,10 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
                         encodedUser);
             }
         }
+
+        // 최종 리다이렉트 로그 (결정 이후)
+        System.out.println("[OAuth2Success] provider=" + provider + " userId=" + user.getId());
+        System.out.println("[OAuth2Success] target=" + oauthTarget + " finalRedirect=" + finalUrl);
 
         // 사용 후 쿠키 만료(클라이언트 지시)
         jakarta.servlet.http.Cookie expired = new jakarta.servlet.http.Cookie("oauth_target", "");
