@@ -87,10 +87,10 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
         if (oauthTarget != null) {
             switch (oauthTarget) {
                 case "app":
-                    // 유니버설 링크로 앱 내 웹뷰에서 콜백 페이지를 직접 로드
-                    finalUrl = String.format("%s%s?token=%s&user=%s",
-                            frontendBaseUrl,
-                            callbackPath,
+                    // SFSafariViewController는 Universal Links로 앱 전환을 허용하지 않음
+                    // → 커스텀 스킴으로 확실히 앱으로 복귀(appUrlOpen 이벤트 유발)
+                    finalUrl = String.format("gamesync:///auth/%s/callback?token=%s&user=%s",
+                            provider,
                             token,
                             encodedUser);
                     break;
