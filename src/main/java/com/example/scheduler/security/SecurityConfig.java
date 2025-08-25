@@ -72,6 +72,8 @@ public class SecurityConfig {
                         ).permitAll()
                         .anyRequest().authenticated()
                 )
+                // /oauth2/authorization/* 진입 시 target 파라미터를 쿠키로 저장
+                .addFilterBefore(new OAuthTargetCookieFilter(), UsernamePasswordAuthenticationFilter.class)
                 // JWT 필터를 UsernamePasswordAuthenticationFilter 전에 등록
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
 
