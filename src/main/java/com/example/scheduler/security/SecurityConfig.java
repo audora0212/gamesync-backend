@@ -106,7 +106,11 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration cfg = new CorsConfiguration();
         // 단일 origin, 혹은 콤마(,) 구분으로 여러 개
-        cfg.setAllowedOrigins(List.of(allowedOrigins.split(",")));
+        List<String> origins = List.of(allowedOrigins.split(","));
+        // Spring은 custom scheme(capacitor/ionic)을 setAllowedOrigins에선 거부할 수 있어 패턴 허용 사용
+        cfg.setAllowedOriginPatterns(origins);
+        // 호환을 위해 http/https 항목은 그대로 설정(실패해도 무해)
+        cfg.setAllowedOrigins(origins);
         cfg.setAllowedMethods(List.of("GET","POST","PUT","DELETE","OPTIONS"));
         cfg.setAllowedHeaders(List.of("*"));
         cfg.setAllowCredentials(true);

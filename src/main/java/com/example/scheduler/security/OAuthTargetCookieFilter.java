@@ -26,8 +26,12 @@ public class OAuthTargetCookieFilter extends OncePerRequestFilter {
                 Cookie cookie = new Cookie("oauth_target", target);
                 cookie.setPath("/");
                 cookie.setMaxAge(300); // 5분
-                // Secure/SameSite 설정은 서버/프록시에서 헤더로 보강될 수 있음
+                cookie.setSecure(true);
+                // Java 표준 Cookie API에는 SameSite 옵션이 없어 헤더로 직접 추가
                 response.addCookie(cookie);
+                // SameSite=None; Secure 속성 강제 추가 (일부 컨테이너에선 위 addCookie만으로는 부족)
+                String setCookieHeader = String.format("oauth_target=%s; Max-Age=300; Path=/; Secure; SameSite=None", target);
+                response.addHeader("Set-Cookie", setCookieHeader);
             }
         }
         filterChain.doFilter(request, response);

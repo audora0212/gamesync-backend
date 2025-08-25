@@ -33,6 +33,9 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
     @Value("${app.frontend.kakao-callback-path:/auth/kakao/callback}")
     private String kakaoCallbackPath;
 
+    @Value("${app.ios.scheme:gamesync://}")
+    private String iosScheme;
+
     public OAuth2LoginSuccessHandler(JwtTokenProvider jwtProvider,
                                      UserRepository userRepo) {
         this.jwtProvider = jwtProvider;
@@ -89,7 +92,8 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
                 case "app":
                     // SFSafariViewController는 Universal Links로 앱 전환을 허용하지 않음
                     // → 커스텀 스킴으로 확실히 앱으로 복귀(appUrlOpen 이벤트 유발)
-                    finalUrl = String.format("gamesync:///auth/%s/callback?token=%s&user=%s",
+                    finalUrl = String.format("%s/auth/%s/callback?token=%s&user=%s",
+                            iosScheme.replaceAll("/$", ""),
                             provider,
                             token,
                             encodedUser);
@@ -105,7 +109,11 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
             // 쿠키가 없는 경우: iOS/모바일 UA면 스킴으로 폴백
             String ua = req.getHeader("User-Agent");
             if (ua != null && (ua.contains("iPhone") || ua.contains("iPad") || ua.contains("iPod") || ua.contains("Mobile"))) {
-                finalUrl = String.format("gamesync:///auth/%s/callback?token=%s&user=%s", provider, token, encodedUser);
+                finalUrl = String.format("%s/auth/%s/callback?token=%s&user=%s",
+                        iosScheme.replaceAll("/$", ""),
+                        provider,
+                        token,
+                        encodedUser);
             }
         }
 
