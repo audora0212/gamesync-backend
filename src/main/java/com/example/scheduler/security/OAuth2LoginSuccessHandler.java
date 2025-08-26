@@ -92,9 +92,10 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
         if (oauthTarget != null) {
             switch (oauthTarget) {
                 case "app":
-                    // 인앱 브라우저 호환성: 우선 HTTPS 콜백으로 보내 프론트가 딥링크/폴백을 수행
+                    // 네이티브 앱으로 직접 복귀: 커스텀 스킴으로 리다이렉트
+                    // iosScheme 예: gamesync://
                     finalUrl = String.format("%s%s?token=%s&user=%s",
-                            frontendBaseUrl,
+                            iosScheme,
                             callbackPath,
                             token,
                             encodedUser);
