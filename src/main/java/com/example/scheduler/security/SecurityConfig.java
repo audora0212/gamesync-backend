@@ -95,6 +95,15 @@ public class SecurityConfig {
                     .redirectionEndpoint(r -> r.baseUri("/login/oauth2/code/*"))
                     .userInfoEndpoint(u -> u.userService(oauth2UserService))
                     .successHandler(oauth2SuccessHandler)
+                    .failureHandler((req, res, ex) -> {
+                        String msg = ex.getMessage();
+                        String provider = "";
+                        if (msg != null && msg.startsWith("oauth_email_linked:")) {
+                            provider = msg.substring("oauth_email_linked:".length());
+                        }
+                        String redirect = "/auth/login?error=oauth_email_linked" + (provider.isEmpty() ? "" : ("&existingProvider=" + provider));
+                        res.sendRedirect(redirect);
+                    })
             );
         }
 

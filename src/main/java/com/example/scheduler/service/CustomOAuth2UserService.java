@@ -48,18 +48,21 @@ public class CustomOAuth2UserService implements OAuth2UserService<OAuth2UserRequ
 		// 1) discordId로 기존 연동 계정이 있으면 사용
 		User user = userRepository.findByDiscordId(discordId).orElse(null);
 
-		// 2) 없으면 이메일로 기존 계정 찾아 discordId를 연결
+
+		// 2) 없으면 이메일로 기존 계정을 조회하되, 이미 다른 소셜로 연결되어 있으면 거절(교차 병합 방지)
 		if (user == null && email != null && !email.isBlank()) {
-			user = userRepository.findByEmail(email).orElse(null);
-			if (user != null) {
-				user.setDiscordId(discordId);
-				if (user.getNickname() == null || user.getNickname().isBlank()) {
-					user.setNickname(username);
+			User byEmail = userRepository.findByEmail(email).orElse(null);
+			if (byEmail != null) {
+				// 카카오로 이미 연결되어 있거나(혹은 다른 소셜) 이메일이 점유된 경우 실패 처리
+				if (byEmail.getKakaoId() != null && !byEmail.getKakaoId().isBlank()) {
+					throw new org.springframework.security.oauth2.core.OAuth2AuthenticationException("oauth_email_linked:kakao");
 				}
-				if (user.getFriendCode() == null || user.getFriendCode().isBlank()) {
-					user.setFriendCode(friendCodeService.generateUniqueFriendCode());
+				if (byEmail.getDiscordId() != null && !byEmail.getDiscordId().isBlank()) {
+					// 이 경우는 논리상 위에서 잡혔어야 하지만, 안전망
+					throw new org.springframework.security.oauth2.core.OAuth2AuthenticationException("oauth_email_linked:discord");
 				}
-				userRepository.save(user);
+				// 로컬 계정만 있어도 자동 병합하지 않음
+				throw new org.springframework.security.oauth2.core.OAuth2AuthenticationException("oauth_email_linked:local");
 			}
 		}
 
