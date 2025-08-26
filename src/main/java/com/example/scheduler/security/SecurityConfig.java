@@ -27,6 +27,9 @@ public class SecurityConfig {
     @Value("${app.cors.allowed-origins:}")
     private String allowedOrigins;
 
+    @Value("${app.frontend.base-url:http://localhost:3000}")
+    private String frontendBaseUrl;
+
     private final JwtTokenProvider tokenProvider;
     private final org.springframework.security.core.userdetails.UserDetailsService userDetailsService;
     private final CustomOAuth2UserService oauth2UserService;
@@ -101,7 +104,9 @@ public class SecurityConfig {
                         if (msg != null && msg.startsWith("oauth_email_linked:")) {
                             provider = msg.substring("oauth_email_linked:".length());
                         }
-                        String redirect = "/auth/login?error=oauth_email_linked" + (provider.isEmpty() ? "" : ("&existingProvider=" + provider));
+                        String redirect = String.format("%s/auth/login?error=oauth_email_linked%s",
+                                frontendBaseUrl,
+                                provider.isEmpty() ? "" : ("&existingProvider=" + provider));
                         res.sendRedirect(redirect);
                     })
             );

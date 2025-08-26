@@ -141,15 +141,34 @@ public class CustomOAuth2UserService implements OAuth2UserService<OAuth2UserRequ
 		final String nicknameFinal = nickname;
 		final String emailFinal = email;
 
-		User user = userRepository.findByKakaoId(kakaoId).orElseGet(() -> {
+
+		// 1) kakaoId로 기존 연동 계정이 있으면 사용
+		User user = userRepository.findByKakaoId(kakaoId).orElse(null);
+
+		// 2) 없으면 이메일로 기존 계정을 조회하되, 이미 다른 소셜로 연결되어 있으면 거절(교차 병합 방지)
+		if (user == null && email != null && !email.isBlank()) {
+			User byEmail = userRepository.findByEmail(email).orElse(null);
+			if (byEmail != null) {
+				if (byEmail.getDiscordId() != null && !byEmail.getDiscordId().isBlank()) {
+					throw new org.springframework.security.oauth2.core.OAuth2AuthenticationException("oauth_email_linked:discord");
+				}
+				if (byEmail.getKakaoId() != null && !byEmail.getKakaoId().isBlank()) {
+					throw new org.springframework.security.oauth2.core.OAuth2AuthenticationException("oauth_email_linked:kakao");
+				}
+				throw new org.springframework.security.oauth2.core.OAuth2AuthenticationException("oauth_email_linked:local");
+			}
+		}
+
+		// 3) 신규 생성
+		if (user == null) {
 			User u = new User();
 			u.setKakaoId(kakaoId);
 			u.setUsername(username);
 			u.setNickname(nicknameFinal);
 			u.setEmail(emailFinal);
 			u.setFriendCode(friendCodeService.generateUniqueFriendCode());
-			return userRepository.save(u);
-		});
+			user = userRepository.save(u);
+		}
 
 		boolean dirty = false;
 		if (email != null && !email.equals(user.getEmail())) {
