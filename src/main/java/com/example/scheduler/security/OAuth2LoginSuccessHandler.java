@@ -92,11 +92,10 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
         if (oauthTarget != null) {
             switch (oauthTarget) {
                 case "app":
-                    // SFSafariViewController는 Universal Links로 앱 전환을 허용하지 않음
-                    // → 커스텀 스킴으로 확실히 앱으로 복귀(appUrlOpen 이벤트 유발)
-                    finalUrl = String.format("%s/auth/%s/callback?token=%s&user=%s",
-                            iosScheme.replaceAll("/$", ""),
-                            provider,
+                    // 인앱 브라우저 호환성: 우선 HTTPS 콜백으로 보내 프론트가 딥링크/폴백을 수행
+                    finalUrl = String.format("%s%s?token=%s&user=%s",
+                            frontendBaseUrl,
+                            callbackPath,
                             token,
                             encodedUser);
                     break;
@@ -108,12 +107,12 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
                     break;
             }
         } else {
-            // 쿠키가 없는 경우: iOS 모바일 UA면 커스텀 스킴으로 폴백하여 인앱 브라우저를 즉시 닫고 앱 복귀 유도
+            // 쿠키가 없는 경우: iOS 모바일 UA면 HTTPS 콜백으로 보내고, 프론트에서 딥링크/폴백 처리
             String ua = req.getHeader("User-Agent");
             if (ua != null && (ua.contains("iPhone") || ua.contains("iPad") || ua.contains("iPod") || ua.contains("Mobile"))) {
-                finalUrl = String.format("%s/auth/%s/callback?token=%s&user=%s",
-                        iosScheme.replaceAll("/$", ""),
-                        provider,
+                finalUrl = String.format("%s%s?token=%s&user=%s",
+                        frontendBaseUrl,
+                        callbackPath,
                         token,
                         encodedUser);
             }
