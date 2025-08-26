@@ -92,9 +92,9 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
         if (oauthTarget != null) {
             switch (oauthTarget) {
                 case "app":
-                    // 네이티브 앱으로 직접 복귀: 커스텀 스킴으로 리다이렉트
-                    // iosScheme 예: gamesync://, callbackPath 예: /auth/discord/callback
-                    String base = iosScheme.endsWith("://") ? iosScheme : (iosScheme + "://");
+                    // 네이티브 앱으로 직접 복귀: 커스텀 스킴으로 리다이렉트 (빈 호스트 보장: scheme:///path)
+                    // iosScheme 예: gamesync://, callbackPath 예: /auth/discord/callback → gamesync:///auth/discord/callback
+                    String base = iosScheme.endsWith("://") ? (iosScheme + "/") : (iosScheme.endsWith(":/") ? (iosScheme + "/") : (iosScheme + "://" + "/"));
                     String path = callbackPath.startsWith("/") ? callbackPath.substring(1) : callbackPath;
                     finalUrl = String.format("%s%s?token=%s&user=%s",
                             base,
@@ -113,7 +113,7 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
             // 쿠키가 없는 경우: iOS 모바일 UA면 커스텀 스킴으로 직접 복귀(인앱 브라우저 자동 종료 유도)
             String ua = req.getHeader("User-Agent");
             if (ua != null && (ua.contains("iPhone") || ua.contains("iPad") || ua.contains("iPod") || ua.contains("Mobile"))) {
-                String base = iosScheme.endsWith("://") ? iosScheme : (iosScheme + "://");
+                String base = iosScheme.endsWith("://") ? (iosScheme + "/") : (iosScheme.endsWith(":/") ? (iosScheme + "/") : (iosScheme + "://" + "/"));
                 String path = callbackPath.startsWith("/") ? callbackPath.substring(1) : callbackPath;
                 finalUrl = String.format("%s%s?token=%s&user=%s", base, path, token, encodedUser);
             }
