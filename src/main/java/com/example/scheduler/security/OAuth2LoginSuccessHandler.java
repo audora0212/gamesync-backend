@@ -108,8 +108,15 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
                     break;
             }
         } else {
-            // 쿠키가 없는 경우: 기본은 웹 콜백(유니버설 링크). iOS에서도 유니버설 링크를 우선 사용.
-            // 커스텀 스킴은 oauth_target=app 인 경우에만 사용.
+            // 쿠키가 없는 경우: iOS 모바일 UA면 커스텀 스킴으로 폴백하여 인앱 브라우저를 즉시 닫고 앱 복귀 유도
+            String ua = req.getHeader("User-Agent");
+            if (ua != null && (ua.contains("iPhone") || ua.contains("iPad") || ua.contains("iPod") || ua.contains("Mobile"))) {
+                finalUrl = String.format("%s/auth/%s/callback?token=%s&user=%s",
+                        iosScheme.replaceAll("/$", ""),
+                        provider,
+                        token,
+                        encodedUser);
+            }
         }
 
         // 최종 리다이렉트 로그 (결정 이후)
