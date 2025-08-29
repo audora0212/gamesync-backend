@@ -6,6 +6,12 @@ import com.example.scheduler.repository.PushTokenRepository;
 import com.google.firebase.messaging.FirebaseMessaging;
 import com.google.firebase.messaging.FirebaseMessagingException;
 import com.google.firebase.messaging.Message;
+import com.google.firebase.messaging.Notification;
+import com.google.firebase.messaging.AndroidConfig;
+import com.google.firebase.messaging.AndroidNotification;
+import com.google.firebase.messaging.ApnsConfig;
+import com.google.firebase.messaging.Aps;
+import com.google.firebase.messaging.ApsAlert;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Service;
@@ -67,12 +73,48 @@ public class PushService {
         logger.info("Dispatching FCM to userId={}, tokenCount={}, title='{}'", user.getId(), tokens.size(), title);
         for (PushToken pt : tokens) {
             try {
-                Message message = Message.builder()
+                // 공통 Notification (표시용)
+                Notification notif = null;
+                if (title != null || body != null) {
+                    notif = Notification.builder()
+                            .setTitle(title != null ? title : "GameSync")
+                            .setBody(body != null ? body : "")
+                            .build();
+                }
+
+                // Android 설정 (heads-up, 사운드, 기본 채널)
+                AndroidConfig androidConfig = AndroidConfig.builder()
+                        .setPriority(AndroidConfig.Priority.HIGH)
+                        .setNotification(AndroidNotification.builder()
+                                .setSound("default")
+                                .setChannelId("default")
+                                .build())
+                        .build();
+
+                // iOS(APNs) 설정 (배너/사운드)
+                ApsAlert apsAlert = ApsAlert.builder()
+                        .setTitle(title != null ? title : "GameSync")
+                        .setBody(body != null ? body : "")
+                        .build();
+                Aps aps = Aps.builder()
+                        .setAlert(apsAlert)
+                        .setSound("default")
+                        .build();
+                ApnsConfig apnsConfig = ApnsConfig.builder()
+                        .setAps(aps)
+                        .build();
+
+                Message.Builder mb = Message.builder()
                         .setToken(pt.getToken())
                         .putAllData(data != null ? data : java.util.Collections.emptyMap())
-                        .putData("title", title != null ? title : "GameSync")
-                        .putData("body", body != null ? body : "")
-                        .build();
+                        .setAndroidConfig(androidConfig)
+                        .setApnsConfig(apnsConfig);
+
+                if (notif != null) {
+                    mb.setNotification(notif);
+                }
+
+                Message message = mb.build();
 
                 String messageId = FirebaseMessaging.getInstance(app).send(message);
                 logger.info("FCM sent ok userId={}, platform={}, tokenHash={}, messageId={}",
