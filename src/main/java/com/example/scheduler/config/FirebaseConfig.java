@@ -12,6 +12,8 @@ import org.springframework.context.annotation.Configuration;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 
 @Configuration
 public class FirebaseConfig {
@@ -19,8 +21,11 @@ public class FirebaseConfig {
     @Value("${firebase.service-account-json:}")
     private String serviceAccountJson; // Base64 또는 plain JSON 문자열
 
+    @Value("${firebase.service-account-path:}")
+    private String serviceAccountPath; // 로컬 파일 경로
+
     @Bean
-    @ConditionalOnExpression("T(org.springframework.util.StringUtils).hasText('${firebase.service-account-json:}')")
+    @ConditionalOnExpression("T(org.springframework.util.StringUtils).hasText('${firebase.service-account-json:}') or T(org.springframework.util.StringUtils).hasText('${firebase.service-account-path:}')")
     public FirebaseApp firebaseApp() throws IOException {
         if (!FirebaseApp.getApps().isEmpty()) {
             var app = FirebaseApp.getInstance();
@@ -29,9 +34,25 @@ public class FirebaseConfig {
             return app;
         }
         String json = serviceAccountJson;
+        // 1) 파일 경로가 주어졌다면 최우선 사용
+        if (json == null || json.trim().isEmpty()) {
+            if (serviceAccountPath != null && !serviceAccountPath.trim().isEmpty()) {
+                try {
+                    byte[] bytes = Files.readAllBytes(Path.of(serviceAccountPath.trim()));
+                    json = new String(bytes, StandardCharsets.UTF_8);
+                    org.slf4j.LoggerFactory.getLogger(FirebaseConfig.class)
+                            .info("Loaded Firebase service account from file: {}", serviceAccountPath);
+                } catch (IOException e) {
+                    org.slf4j.LoggerFactory.getLogger(FirebaseConfig.class)
+                            .error("Failed to read Firebase service account file: {}", serviceAccountPath, e);
+                }
+            }
+        }
+
+        // 2) 환경변수/프로퍼티로 전달된 base64 문자열 감지
         // base64로 전달된 경우 자동 디코딩 시도
         try {
-            String trimmed = serviceAccountJson.trim();
+            String trimmed = (json != null ? json : "").trim();
             // 간단 휴리스틱: '{'로 시작하지 않으면 base64로 간주
             if (!trimmed.startsWith("{")) {
                 byte[] decoded = java.util.Base64.getDecoder().decode(trimmed);
@@ -44,6 +65,10 @@ public class FirebaseConfig {
             }
         } catch (IllegalArgumentException ignore) {
             // base64 디코딩 실패 시 그대로 사용
+        }
+
+        if (json == null || json.trim().isEmpty()) {
+            throw new IOException("Firebase service account is not configured. Provide 'firebase.service-account-path' or 'firebase.service-account-json'.");
         }
 
         var credsStream = new ByteArrayInputStream(json.getBytes(StandardCharsets.UTF_8));
