@@ -63,21 +63,43 @@ public class NotificationService {
             java.util.HashMap<String, String> data = new java.util.HashMap<>();
             data.put("type", type.name());
             if (message != null) data.put("payload", message);
-            // Body 정규화: JSON payload인 경우 사람 친화적 문구로 변환
+
+            // Body 정규화 및 클릭 URL 구성
             String pushBody = null;
+            String clickUrl = null;
             if (message != null) {
                 String trimmed = message.trim();
                 if (trimmed.startsWith("{") && trimmed.endsWith("}")) {
                     try {
-                        com.fasterxml.jackson.databind.JsonNode node = new com.fasterxml.jackson.databind.ObjectMapper().readTree(trimmed);
+                        com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+                        com.fasterxml.jackson.databind.JsonNode node = mapper.readTree(trimmed);
                         String kind = node.has("kind") ? node.get("kind").asText(null) : null;
                         if ("friend_request".equals(kind)) {
-                            String from = node.has("fromNickname") ? node.get("fromNickname").asText("상대방") : "상대방";
+                            // 친구 요청: 대시보드 진입 시 친구 패널 자동 오픈
                             pushBody = "친구패널에서 수락/거절할 수 있어요";
+                            clickUrl = "/dashboard?friends=1";
                         } else if ("server_invite".equals(kind)) {
+                            // 서버 초대: 초대 확인 모달 페이지로 이동 (inviteId 기반)
                             String from = node.has("fromNickname") ? node.get("fromNickname").asText("상대방") : "상대방";
                             String serverName = node.has("serverName") ? node.get("serverName").asText("") : "";
                             pushBody = from + " → " + serverName;
+                            if (node.has("inviteId")) {
+                                long inviteId = node.get("inviteId").asLong();
+                                clickUrl = "/invite/by-id?inviteId=" + inviteId;
+                            }
+                        } else if ("timetable".equals(kind)) {
+                            // 향후: 서버 상세로 이동하도록 serverId가 포함될 경우 URL 구성
+                            if (node.has("serverId")) {
+                                long serverId = node.get("serverId").asLong();
+                                clickUrl = "/server/" + serverId;
+                            }
+                            pushBody = title; // 이미 사람 친화적 제목 제공됨
+                        } else if ("party".equals(kind)) {
+                            if (node.has("serverId")) {
+                                long serverId = node.get("serverId").asLong();
+                                clickUrl = "/server/" + serverId + "?open=party";
+                            }
+                            pushBody = title;
                         } else {
                             pushBody = message;
                         }
@@ -88,6 +110,11 @@ public class NotificationService {
                     pushBody = message;
                 }
             }
+
+            if (clickUrl != null && !clickUrl.isBlank()) {
+                data.put("url", clickUrl);
+            }
+
             boolean allow = allowPush(to, type);
             if (allow) {
                 String bodyToSend = (pushBody != null && pushBody.length() <= 120) ? pushBody : null;

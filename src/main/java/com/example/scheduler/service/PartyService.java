@@ -82,8 +82,16 @@ public class PartyService {
             if (m.getId().equals(user.getId())) continue;
             String gameName = (saved.getCustomGame() != null) ? saved.getCustomGame().getName() : saved.getDefaultGame().getName();
             String title = "파티 모집";
-            String msg = String.format("%s님이 %s에서 %s 파티를 모집합니다 (%d명)", user.getNickname(), server.getName(), gameName, saved.getCapacity());
-            notificationService.notify(m, com.example.scheduler.domain.NotificationType.PARTY, title, msg);
+            // payload는 JSON: kind=party, serverId 포함 → 클릭 시 해당 서버로 이동 가능
+            String payload = String.format(
+                    "{\"kind\":\"party\",\"serverId\":%d,\"serverName\":\"%s\",\"fromNickname\":\"%s\",\"gameName\":\"%s\",\"capacity\":%d}",
+                    server.getId(),
+                    safe(server.getName()),
+                    safe(user.getNickname()),
+                    safe(gameName),
+                    saved.getCapacity()
+            );
+            notificationService.notify(m, com.example.scheduler.domain.NotificationType.PARTY, title, payload);
         }
 
         return toResp(saved);
@@ -213,6 +221,8 @@ public class PartyService {
     public void deletePartyEndpoint(Long partyId) {
         deleteParty(partyId);
     }
+    private static String safe(String s) {
+        if (s == null) return "";
+        return s.replace("\\", "\\\\").replace("\"", "\\\"");
+    }
 }
-
-

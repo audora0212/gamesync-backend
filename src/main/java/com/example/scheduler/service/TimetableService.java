@@ -70,7 +70,7 @@ public class TimetableService {
             String details = String.format("game=%s;slot=%s", safeGameName(e), e.getSlot().toString());
             auditService.log(srv.getId(), user.getId(), "TIMETABLE_REGISTER", details);
         } catch (Exception ignored) {}
-        // 알림: 같은 서버의 내 친구들에게 통지
+        // 알림: 같은 서버의 내 친구들에게 통지 (JSON payload에 serverId 포함)
         notifyFriendsInServer(user, srv, e);
         return toResp(e);
     }
@@ -188,12 +188,20 @@ public class TimetableService {
                         ? entry.getCustomGame().getName()
                         : entry.getDefaultGame().getName();
                 // 패널 표시 여부는 사용자 설정에 따라 NotificationService에서 결정
+                // payload는 JSON: kind=timetable, serverId 포함 → 클릭 시 해당 서버로 이동 가능
+                String payload = String.format(
+                        "{\"kind\":\"timetable\",\"serverId\":%d,\"serverName\":\"%s\",\"fromNickname\":\"%s\",\"gameName\":\"%s\"}",
+                        server.getId(),
+                        safe(server.getName()),
+                        safe(actor.getNickname()),
+                        safe(gameName)
+                );
                 notificationService.notifyIfFriendEnabled(
                         m, // owner(수신자)
                         actor, // friend(발신자)
                         com.example.scheduler.domain.NotificationType.TIMETABLE,
                         "친구의 스케줄 등록",
-                        String.format("%s님이 %s 서버에 %s 예약을 등록했습니다.", actor.getNickname(), server.getName(), gameName)
+                        payload
                 );
             }
         }
@@ -203,5 +211,10 @@ public class TimetableService {
         if (entry.getCustomGame() != null) return entry.getCustomGame().getName();
         if (entry.getDefaultGame() != null) return entry.getDefaultGame().getName();
         return "";
+    }
+
+    private String safe(String s) {
+        if (s == null) return "";
+        return s.replace("\\", "\\\\").replace("\"", "\\\"");
     }
 }
