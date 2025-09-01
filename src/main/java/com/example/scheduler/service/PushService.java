@@ -100,7 +100,11 @@ public class PushService {
                         .setAlert(apsAlert)
                         .setSound("default")
                         .build();
+                // iOS 13+ requires apns-push-type header; apns-topic must match bundle id
                 ApnsConfig apnsConfig = ApnsConfig.builder()
+                        .putHeader("apns-push-type", "alert")
+                        .putHeader("apns-priority", "10")
+                        .putHeader("apns-topic", "cloud.gamesync.app")
                         .setAps(aps)
                         .build();
 
