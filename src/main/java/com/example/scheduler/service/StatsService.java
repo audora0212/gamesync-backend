@@ -76,17 +76,78 @@ public class StatsService {
             slots = current.stream().map(TimetableEntry::getSlot).toList();
         }
 
-        Map<String, Long> gameCounts = gameNames.stream()
-                .collect(Collectors.groupingBy(n -> n, Collectors.counting()));
+        // 동일 사용자가 같은 날 여러 번 예약해도 1회로 집계되도록 사용자-날짜 기준으로 중복 제거
+        // AuditLog에는 userId가 있으므로, 주간 집계는 userId+dateKey로 집계
+        var userDayToGames = new HashMap<String, java.util.Set<String>>();
+        var logsForWeek = auditRepo.findByServerIdAndActionAndOccurredAtBetween(serverId, "TIMETABLE_REGISTER", start, end);
+        for (var l : logsForWeek) {
+            Long uid = l.getUserId();
+            LocalDate day = l.getOccurredAt().toLocalDate();
+            String d = l.getDetails();
+            String game = null;
+            if (d != null) {
+                for (String p : d.split(";")) {
+                    int idx = p.indexOf('=');
+                    if (idx <= 0) continue;
+                    String k = p.substring(0, idx).trim();
+                    String v = p.substring(idx + 1).trim();
+                    if ("game".equals(k)) game = v;
+                }
+            }
+            if (game == null) continue;
+            String key = (uid == null ? "anon" : String.valueOf(uid)) + "@" + day.toString();
+            userDayToGames.computeIfAbsent(key, k -> new java.util.HashSet<>()).add(game);
+        }
+        Map<String, Long> gameCounts;
+        if (!userDayToGames.isEmpty()) {
+            // 사용자-날짜 단위로 유니크 게임 집계
+            gameCounts = new HashMap<>();
+            for (var set : userDayToGames.values()) {
+                for (String g : set) {
+                    Long prev = gameCounts.get(g);
+                    gameCounts.put(g, prev == null ? 1L : prev + 1L);
+                }
+            }
+        } else {
+            // 보조: 기존 방식(엔트리/로그 단순 카운트)
+            gameCounts = gameNames.stream().collect(Collectors.groupingBy(n -> n, Collectors.counting()));
+        }
 
         List<StatsDto.NameCount> topGames = gameCounts.entrySet().stream()
                 .sorted(Map.Entry.<String, Long>comparingByValue().reversed())
                 .map(e -> new StatsDto.NameCount(e.getKey(), e.getValue()))
                 .toList();
 
+        // 시간대 집계도 사용자-날짜 단위 1회로 제한
         long[] hourCountsArr = new long[24];
-        for (LocalDateTime s : slots) {
-            hourCountsArr[s.getHour()]++;
+        if (!logsForWeek.isEmpty()) {
+            var userDayToHour = new HashMap<String, Integer>();
+            for (var l : logsForWeek) {
+                Long uid = l.getUserId();
+                LocalDate day = l.getOccurredAt().toLocalDate();
+                LocalDateTime s = l.getOccurredAt();
+                String d = l.getDetails();
+                if (d != null) {
+                    for (String p : d.split(";")) {
+                        int idx = p.indexOf('=');
+                        if (idx <= 0) continue;
+                        String k = p.substring(0, idx).trim();
+                        String v = p.substring(idx + 1).trim();
+                        if ("slot".equals(k)) { try { s = LocalDateTime.parse(v);} catch (Exception ignored) {} }
+                    }
+                }
+                String key = (uid == null ? "anon" : String.valueOf(uid)) + "@" + day.toString();
+                // 같은 사용자/날짜에 여러 슬롯이 있으면 가장 이른 시간 기준으로 1회 집계
+                int hour = s.getHour();
+                userDayToHour.merge(key, hour, Math::min);
+            }
+            for (int hour : userDayToHour.values()) {
+                if (hour >= 0 && hour < 24) hourCountsArr[hour]++;
+            }
+        } else {
+            for (LocalDateTime s : slots) {
+                hourCountsArr[s.getHour()]++;
+            }
         }
         List<StatsDto.HourCount> hourCounts = new ArrayList<>();
         int topHour = 0; long topHourCount = 0;
