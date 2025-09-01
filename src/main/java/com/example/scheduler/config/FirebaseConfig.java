@@ -14,6 +14,9 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Map;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 @Configuration
 public class FirebaseConfig {
@@ -71,12 +74,27 @@ public class FirebaseConfig {
             throw new IOException("Firebase service account is not configured. Provide 'firebase.service-account-path' or 'firebase.service-account-json'.");
         }
 
+        // Try to extract project_id from the JSON and set it explicitly for FCM v1
+        String projectId = null;
+        try {
+            ObjectMapper mapper = new ObjectMapper();
+            @SuppressWarnings("unchecked")
+            Map<String, Object> map = mapper.readValue(json, Map.class);
+            Object pid = map.get("project_id");
+            if (pid instanceof String pidStr && !pidStr.isBlank()) {
+                projectId = pidStr;
+            }
+        } catch (Exception ignore) {}
+
         var credsStream = new ByteArrayInputStream(json.getBytes(StandardCharsets.UTF_8));
-        FirebaseOptions options = FirebaseOptions.builder()
-                .setCredentials(GoogleCredentials.fromStream(credsStream))
-                .build();
+        FirebaseOptions.Builder builder = FirebaseOptions.builder()
+                .setCredentials(GoogleCredentials.fromStream(credsStream));
+        if (projectId != null) {
+            builder.setProjectId(projectId);
+        }
+        FirebaseOptions options = builder.build();
         var app = FirebaseApp.initializeApp(options);
-        String projectId = app.getOptions() != null ? app.getOptions().getProjectId() : null;
+        projectId = app.getOptions() != null ? app.getOptions().getProjectId() : projectId;
         org.slf4j.LoggerFactory.getLogger(FirebaseConfig.class)
                 .info("Firebase initialized successfully (projectId={})", projectId);
         return app;
