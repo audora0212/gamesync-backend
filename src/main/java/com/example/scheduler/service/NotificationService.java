@@ -76,7 +76,8 @@ public class NotificationService {
                         String kind = node.has("kind") ? node.get("kind").asText(null) : null;
                         if ("friend_request".equals(kind)) {
                             // 친구 요청: 대시보드 진입 시 친구 패널 자동 오픈
-                            pushBody = "친구패널에서 수락/거절할 수 있어요";
+                            String from = node.has("fromNickname") ? node.get("fromNickname").asText("상대방") : "상대방";
+                            pushBody = from + " 님이 친구 요청을 보냈습니다.";
                             clickUrl = "/dashboard?friends=1";
                         } else if ("server_invite".equals(kind)) {
                             // 서버 초대: 초대 확인 모달 페이지로 이동 (inviteId 기반)
@@ -88,18 +89,26 @@ public class NotificationService {
                                 clickUrl = "/invite/by-id?inviteId=" + inviteId;
                             }
                         } else if ("timetable".equals(kind)) {
-                            // 향후: 서버 상세로 이동하도록 serverId가 포함될 경우 URL 구성
+                            // 친구 스케줄 등록: 사람 친화적 본문 구성 + 서버 상세로 이동
+                            String from = node.has("fromNickname") ? node.get("fromNickname").asText("친구") : "친구";
+                            String serverName = node.has("serverName") ? node.get("serverName").asText("") : "";
+                            String gameName = node.has("gameName") ? node.get("gameName").asText("") : "";
+                            pushBody = String.format("%s님이 %s 서버에 %s 예약을 등록했습니다.", from, serverName, gameName);
                             if (node.has("serverId")) {
                                 long serverId = node.get("serverId").asLong();
                                 clickUrl = "/server/" + serverId;
                             }
-                            pushBody = title; // 이미 사람 친화적 제목 제공됨
                         } else if ("party".equals(kind)) {
+                            // 파티 모집: 사람 친화적 본문 구성 + 서버 상세 이동(파티 탭/모달 암시 플래그)
+                            String from = node.has("fromNickname") ? node.get("fromNickname").asText("사용자") : "사용자";
+                            String serverName = node.has("serverName") ? node.get("serverName").asText("") : "";
+                            String gameName = node.has("gameName") ? node.get("gameName").asText("") : "";
+                            Integer capacity = node.has("capacity") ? node.get("capacity").asInt(0) : 0;
                             if (node.has("serverId")) {
                                 long serverId = node.get("serverId").asLong();
                                 clickUrl = "/server/" + serverId + "?open=party";
                             }
-                            pushBody = title;
+                            pushBody = String.format("%s님이 %s에서 %s 파티를 모집합니다 (%d명)", from, serverName, gameName, capacity);
                         } else {
                             pushBody = message;
                         }
