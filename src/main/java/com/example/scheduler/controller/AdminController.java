@@ -36,7 +36,8 @@ public class AdminController {
     @GetMapping("/servers")
     public ResponseEntity<List<AdminDto.ServerItem>> listServers() {
         var list = serverRepo.findAll().stream().map(s -> new AdminDto.ServerItem(
-                s.getId(), s.getName(), s.getOwner()!=null?s.getOwner().getId():null, s.getResetTime(), s.getMembers()!=null?s.getMembers().size():0
+                s.getId(), s.getName(), s.getOwner()!=null?s.getOwner().getId():null, s.getOwner()!=null?s.getOwner().getNickname():null,
+                s.getResetTime(), s.getMembers()!=null?s.getMembers().size():0
         )).toList();
         return ResponseEntity.ok(list);
     }
@@ -57,7 +58,12 @@ public class AdminController {
     @GetMapping("/timetables")
     public ResponseEntity<List<AdminDto.TimetableItem>> listTimetables() {
         var list = entryRepo.findAll().stream().map(e -> new AdminDto.TimetableItem(
-                e.getId(), e.getServer()!=null?e.getServer().getId():null, e.getUser()!=null?e.getUser().getId():null, e.getSlot(),
+                e.getId(),
+                e.getServer()!=null?e.getServer().getId():null,
+                e.getServer()!=null?e.getServer().getName():null,
+                e.getUser()!=null?e.getUser().getId():null,
+                e.getUser()!=null?e.getUser().getNickname():null,
+                e.getSlot(),
                 e.getCustomGame()!=null?e.getCustomGame().getName():(e.getDefaultGame()!=null?e.getDefaultGame().getName():null)
         )).toList();
         return ResponseEntity.ok(list);
@@ -78,7 +84,12 @@ public class AdminController {
     @GetMapping("/parties")
     public ResponseEntity<List<AdminDto.PartyItem>> listParties() { 
         var list = partyRepo.findAll().stream().map(p -> new AdminDto.PartyItem(
-                p.getId(), p.getServer()!=null?p.getServer().getId():null, p.getCreator()!=null?p.getCreator().getId():null, p.getSlot(), p.getCapacity(),
+                p.getId(),
+                p.getServer()!=null?p.getServer().getId():null,
+                p.getServer()!=null?p.getServer().getName():null,
+                p.getCreator()!=null?p.getCreator().getId():null,
+                p.getCreator()!=null?p.getCreator().getNickname():null,
+                p.getSlot(), p.getCapacity(),
                 p.getCustomGame()!=null?p.getCustomGame().getName():(p.getDefaultGame()!=null?p.getDefaultGame().getName():null),
                 p.getParticipants()!=null?p.getParticipants().size():0
         )).toList();

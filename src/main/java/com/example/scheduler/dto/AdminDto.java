@@ -21,6 +21,7 @@ public class AdminDto {
         private Long id;
         private String name;
         private Long ownerId;
+        private String ownerNickname;
         private java.time.LocalTime resetTime;
         private int members;
     }
@@ -29,7 +30,9 @@ public class AdminDto {
     public static class TimetableItem {
         private Long id;
         private Long serverId;
+        private String serverName;
         private Long userId;
+        private String userNickname;
         private LocalDateTime slot;
         private String gameName;
     }
@@ -38,7 +41,9 @@ public class AdminDto {
     public static class PartyItem {
         private Long id;
         private Long serverId;
+        private String serverName;
         private Long creatorId;
+        private String creatorNickname;
         private LocalDateTime slot;
         private int capacity;
         private String gameName;
