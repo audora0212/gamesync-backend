@@ -1,9 +1,9 @@
 package com.example.scheduler.controller;
 
-import com.example.scheduler.domain.AuditLog;
 import com.example.scheduler.domain.Server;
 import com.example.scheduler.domain.TimetableEntry;
 import com.example.scheduler.domain.Party;
+import com.example.scheduler.dto.AdminDto;
 import com.example.scheduler.repository.AuditLogRepository;
 import com.example.scheduler.repository.ServerRepository;
 import com.example.scheduler.repository.TimetableEntryRepository;
@@ -25,13 +25,21 @@ public class AdminController {
 
     // ----- Audit logs -----
     @GetMapping("/audit-logs")
-    public ResponseEntity<List<AuditLog>> listAuditLogs() {
-        return ResponseEntity.ok(auditRepo.findAll());
+    public ResponseEntity<List<AdminDto.AuditLogItem>> listAuditLogs() {
+        var list = auditRepo.findAll().stream().map(l -> new AdminDto.AuditLogItem(
+                l.getId(), l.getServerId(), l.getUserId(), l.getAction(), l.getDetails(), l.getOccurredAt()
+        )).toList();
+        return ResponseEntity.ok(list);
     }
 
     // ----- Servers -----
     @GetMapping("/servers")
-    public ResponseEntity<List<Server>> listServers() { return ResponseEntity.ok(serverRepo.findAll()); }
+    public ResponseEntity<List<AdminDto.ServerItem>> listServers() {
+        var list = serverRepo.findAll().stream().map(s -> new AdminDto.ServerItem(
+                s.getId(), s.getName(), s.getOwner()!=null?s.getOwner().getId():null, s.getResetTime(), s.getMembers()!=null?s.getMembers().size():0
+        )).toList();
+        return ResponseEntity.ok(list);
+    }
 
     @DeleteMapping("/servers/{id}")
     public ResponseEntity<Void> deleteServer(@PathVariable Long id) {
@@ -47,7 +55,13 @@ public class AdminController {
 
     // ----- Timetables -----
     @GetMapping("/timetables")
-    public ResponseEntity<List<TimetableEntry>> listTimetables() { return ResponseEntity.ok(entryRepo.findAll()); }
+    public ResponseEntity<List<AdminDto.TimetableItem>> listTimetables() {
+        var list = entryRepo.findAll().stream().map(e -> new AdminDto.TimetableItem(
+                e.getId(), e.getServer()!=null?e.getServer().getId():null, e.getUser()!=null?e.getUser().getId():null, e.getSlot(),
+                e.getCustomGame()!=null?e.getCustomGame().getName():(e.getDefaultGame()!=null?e.getDefaultGame().getName():null)
+        )).toList();
+        return ResponseEntity.ok(list);
+    }
 
     @DeleteMapping("/timetables/{id}")
     public ResponseEntity<Void> deleteTimetable(@PathVariable Long id) {
@@ -62,7 +76,14 @@ public class AdminController {
 
     // ----- Parties -----
     @GetMapping("/parties")
-    public ResponseEntity<List<Party>> listParties() { return ResponseEntity.ok(partyRepo.findAll()); }
+    public ResponseEntity<List<AdminDto.PartyItem>> listParties() { 
+        var list = partyRepo.findAll().stream().map(p -> new AdminDto.PartyItem(
+                p.getId(), p.getServer()!=null?p.getServer().getId():null, p.getCreator()!=null?p.getCreator().getId():null, p.getSlot(), p.getCapacity(),
+                p.getCustomGame()!=null?p.getCustomGame().getName():(p.getDefaultGame()!=null?p.getDefaultGame().getName():null),
+                p.getParticipants()!=null?p.getParticipants().size():0
+        )).toList();
+        return ResponseEntity.ok(list);
+    }
 
     @DeleteMapping("/parties/{id}")
     public ResponseEntity<Void> deleteParty(@PathVariable Long id) {
