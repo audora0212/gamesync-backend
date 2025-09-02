@@ -73,6 +73,7 @@ public class SecurityConfig {
                                 "/actuator/health/**",
                                 "/actuator/info"
                         ).permitAll()
+                        .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .anyRequest().authenticated()
                 )
                 // /oauth2/authorization/* 진입 시 target 파라미터를 쿠키로 저장
