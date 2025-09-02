@@ -84,4 +84,9 @@ public class User {
     /** 마지막 닉네임 변경 시각 (24시간 제한 용도) */
     @Column(name = "nickname_changed_at")
     private LocalDateTime nicknameChangedAt;
+
+    /** GameSync 플랫폼 관리자 여부 */
+    @Builder.Default
+    @Column(nullable = true)
+    private Boolean admin = false;
 }

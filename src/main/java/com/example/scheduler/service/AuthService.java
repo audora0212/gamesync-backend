@@ -41,6 +41,7 @@ public class AuthService {
                 .username(req.getUsername())
                 .nickname(req.getNickname())
                 .password(encoder.encode(req.getPassword()))
+                .admin(false)
                 .friendCode(friendCodeService.generateUniqueFriendCode())
                 .build();
         userRepo.save(user);

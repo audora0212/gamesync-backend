@@ -12,6 +12,7 @@ public class UserDto {
         private String email;
         private Boolean notificationsEnabled;
         private Boolean discordLinked;
+        private Boolean admin;
     }
 
     @Data

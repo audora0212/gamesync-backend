@@ -74,6 +74,7 @@ public class CustomOAuth2UserService implements OAuth2UserService<OAuth2UserRequ
 			user.setUsername(uniqueUsername);
 			user.setNickname(username != null ? username : uniqueUsername);
 			user.setEmail(email);
+			user.setAdmin(false);
 			user.setFriendCode(friendCodeService.generateUniqueFriendCode());
 			user = userRepository.save(user);
 		}
@@ -166,6 +167,7 @@ public class CustomOAuth2UserService implements OAuth2UserService<OAuth2UserRequ
 			u.setUsername(username);
 			u.setNickname(nicknameFinal);
 			u.setEmail(emailFinal);
+			u.setAdmin(false);
 			u.setFriendCode(friendCodeService.generateUniqueFriendCode());
 			user = userRepository.save(u);
 		}

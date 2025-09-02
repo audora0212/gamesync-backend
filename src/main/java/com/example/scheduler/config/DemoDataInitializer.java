@@ -41,6 +41,7 @@ public class DemoDataInitializer implements ApplicationRunner {
                     .password(passwordEncoder.encode("asdfasdf"))
                     .email("test@example.com")
                     .notificationsEnabled(true)
+                    .admin(true)
                     .build();
             return userRepo.save(t);
         });
@@ -61,6 +62,7 @@ public class DemoDataInitializer implements ApplicationRunner {
                             .password(passwordEncoder.encode("demo" + idx + "-pass"))
                             .email(uname + "@example.com")
                             .notificationsEnabled(true)
+                            .admin(idx == 1) // 첫 번째 데모 유저를 관리자 예시로 지정
                             .build())
             );
             users.add(u);

@@ -25,7 +25,8 @@ public class UserService {
                 user.getNickname(),
                 user.getEmail(),
                 user.getNotificationsEnabled(),
-                user.getDiscordId() != null
+                user.getDiscordId() != null,
+                Boolean.TRUE.equals(user.getAdmin())
         );
     }
 
@@ -58,7 +59,8 @@ public class UserService {
                 user.getNickname(),
                 user.getEmail(),
                 user.getNotificationsEnabled(),
-                user.getDiscordId() != null
+                user.getDiscordId() != null,
+                Boolean.TRUE.equals(user.getAdmin())
         );
     }
 
@@ -80,7 +82,8 @@ public class UserService {
                 user.getNickname(),
                 user.getEmail(),
                 user.getNotificationsEnabled(),
-                user.getDiscordId() != null
+                user.getDiscordId() != null,
+                Boolean.TRUE.equals(user.getAdmin())
         );
     }
 
