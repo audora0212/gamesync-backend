@@ -153,7 +153,49 @@ public class TimetableService {
         ).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
         Server srv = serverRepo.findById(serverId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        try {
+            // 감사 로그: 파티 이동/탈퇴 등으로 내 타임테이블 삭제
+            var entries = entryRepo.findByServerAndUser(srv, user);
+            entries.ifPresent(e -> {
+                String details = String.format("reason=USER_ACTION;game=%s;slot=%s",
+                        safeGameName(e), e.getSlot());
+                auditService.log(srv.getId(), user.getId(), "TIMETABLE_DELETE", details);
+            });
+        } catch (Exception ignored) {}
         entryRepo.deleteAllByServerAndUser(srv, user);
+    }
+
+    @Transactional
+    public TimetableDto.EntryResponse update(Long serverId, LocalDateTime newSlot, Long defaultGameId, Long customGameId) {
+        User user = userRepo.findByUsername(
+                SecurityContextHolder.getContext().getAuthentication().getName()
+        ).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        Server srv = serverRepo.findById(serverId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        TimetableEntry e = entryRepo.findByServerAndUser(srv, user)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+
+        LocalDateTime oldSlot = e.getSlot();
+        String oldGame = safeGameName(e);
+        if (customGameId != null) {
+            CustomGame cg = customGameRepo.findById(customGameId)
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid customGameId"));
+            e.setCustomGame(cg);
+            e.setDefaultGame(null);
+        } else if (defaultGameId != null) {
+            DefaultGame dg = defaultGameRepo.findById(defaultGameId)
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid defaultGameId"));
+            e.setDefaultGame(dg);
+            e.setCustomGame(null);
+        }
+        if (newSlot != null) e.setSlot(newSlot.truncatedTo(ChronoUnit.MINUTES));
+        entryRepo.save(e);
+        try {
+            String details = String.format("fromGame=%s;fromSlot=%s;toGame=%s;toSlot=%s",
+                    oldGame, oldSlot, safeGameName(e), e.getSlot());
+            auditService.log(srv.getId(), user.getId(), "TIMETABLE_UPDATE", details);
+        } catch (Exception ignored) {}
+        return toResp(e);
     }
 
     private TimetableDto.EntryResponse toResp(TimetableEntry e) {

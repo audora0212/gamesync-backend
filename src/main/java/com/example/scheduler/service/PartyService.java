@@ -28,6 +28,7 @@ public class PartyService {
     private final TimetableService timetableService;
     private final NotificationService notificationService;
     private final TimetableEntryRepository timetableEntryRepository;
+    private final AuditService auditService;
 
     private User currentUser() {
         return userRepo.findByUsername(SecurityContextHolder.getContext().getAuthentication().getName())
@@ -62,6 +63,11 @@ public class PartyService {
 
         // 우선 파티를 저장
         Party saved = partyRepo.save(p);
+        try {
+            String gameName = (saved.getCustomGame() != null) ? saved.getCustomGame().getName() : saved.getDefaultGame().getName();
+            String details = String.format("game=%s;slot=%s;capacity=%d", safe(gameName), saved.getSlot(), saved.getCapacity());
+            auditService.log(server.getId(), user.getId(), "PARTY_CREATE", details);
+        } catch (Exception ignored) {}
 
         // 생성자의 타임테이블 먼저 등록 (파티 참가 이전에 수행하여 파티 참가중 가드에 걸리지 않도록 함)
         TimetableDto.EntryRequest tReq = new TimetableDto.EntryRequest();
@@ -76,6 +82,11 @@ public class PartyService {
 
         // 생성자는 자동 참가
         saved.getParticipants().add(user);
+        try {
+            String gameName = (saved.getCustomGame() != null) ? saved.getCustomGame().getName() : saved.getDefaultGame().getName();
+            String details = String.format("game=%s;slot=%s", safe(gameName), saved.getSlot());
+            auditService.log(server.getId(), user.getId(), "PARTY_JOIN", details);
+        } catch (Exception ignored) {}
 
         // 서버 모든 멤버에게 파티 모집 알림 (소유자 제외 가능)
         for (User m : server.getMembers()) {
@@ -140,6 +151,11 @@ public class PartyService {
         timetableService.add(req);
 
         party.getParticipants().add(user);
+        try {
+            String gameName = (party.getCustomGame() != null) ? party.getCustomGame().getName() : party.getDefaultGame().getName();
+            String details = String.format("game=%s;slot=%s", safe(gameName), party.getSlot());
+            auditService.log(party.getServer().getId(), user.getId(), "PARTY_JOIN", details);
+        } catch (Exception ignored) {}
         return toResp(party);
     }
 
@@ -157,6 +173,11 @@ public class PartyService {
         // 한 서버당 하나만 유지되는 정책이므로 서버-유저 조합 모두 삭제
         removeMyTimetableEntry(party.getServer(), user);
 
+        try {
+            String gameName = (party.getCustomGame() != null) ? party.getCustomGame().getName() : party.getDefaultGame().getName();
+            String details = String.format("game=%s;slot=%s", safe(gameName), party.getSlot());
+            auditService.log(party.getServer().getId(), user.getId(), "PARTY_LEAVE", details);
+        } catch (Exception ignored) {}
         return toResp(party);
     }
 
@@ -213,6 +234,11 @@ public class PartyService {
                 timetableEntryRepository.deleteAllByServerAndUser(server, u);
             }
         }
+        try {
+            String gameName = (party.getCustomGame() != null) ? party.getCustomGame().getName() : party.getDefaultGame().getName();
+            String details = String.format("game=%s;slot=%s", safe(gameName), party.getSlot());
+            auditService.log(party.getServer().getId(), me.getId(), "PARTY_DELETE", details);
+        } catch (Exception ignored) {}
         partyRepo.delete(party);
     }
 
