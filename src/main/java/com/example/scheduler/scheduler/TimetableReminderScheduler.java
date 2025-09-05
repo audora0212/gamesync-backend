@@ -24,7 +24,7 @@ public class TimetableReminderScheduler {
     }
 
     // 1분마다 체크
-    @Scheduled(cron = "0 * * * * *")
+    @Scheduled(cron = "0 * * * * *", zone = "Asia/Seoul")
     public void sendReminders() {
         LocalDateTime now = LocalDateTime.now().withSecond(0).withNano(0);
         // 오늘과 내일 사이 전체 엔트리 조회 후, 각 유저의 설정을 기준으로 now + offset 일치 여부 확인

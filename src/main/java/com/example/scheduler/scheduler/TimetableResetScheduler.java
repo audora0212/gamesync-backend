@@ -20,7 +20,7 @@ public class TimetableResetScheduler {
     private final TimetableEntryRepository entryRepo;
     private final AuditService auditService;
 
-    @Scheduled(cron = "0 * * * * *")
+    @Scheduled(cron = "0 * * * * *", zone = "Asia/Seoul")
     @Transactional
     public void resetTimetables() {
         LocalTime now = LocalTime.now().withSecond(0).withNano(0);
