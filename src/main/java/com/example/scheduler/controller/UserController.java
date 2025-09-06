@@ -1,6 +1,7 @@
 package com.example.scheduler.controller;
 
 import com.example.scheduler.dto.UserDto;
+import com.example.scheduler.security.AdminGuard;
 import com.example.scheduler.service.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -15,11 +16,16 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class UserController {
     private final UserService userService;
+    private final AdminGuard adminGuard;
 
     @GetMapping
     public ResponseEntity<UserDto.Profile> getProfile(Authentication auth) {
         String username = auth.getName();
-        return ResponseEntity.ok(userService.getProfile(username));
+        UserDto.Profile p = userService.getProfile(username);
+        boolean isAdmin = adminGuard.isAdmin(username);
+        return ResponseEntity.ok()
+                .header("X-Admin", isAdmin ? "true" : "false")
+                .body(p);
     }
 
     @PutMapping("/nickname")

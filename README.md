@@ -1,276 +1,85 @@
 # GameSync Backend
 
-> **최영찬 (Lead)** – 전체 아키텍처 설계, 인증/보안, 스케줄러, 중요 API 설계 및 구현
->
-> **정승수 (Team)** – 서비스 구현 (GameService, TimetableService), 예외 처리, 테스트, 문서 보강
+GameSync는 팀/친구와 게임 약속을 쉽고 정확하게 잡는 서비스입니다. 이 레포는 Spring Boot 기반 백엔드로, OAuth2 로그인(Discord/Kakao), JWT 인증, 서버/파티/시간표 도메인, 푸시(Firebase FCM/APNs), 스케줄러, 감사 로그까지 운영에 필요한 기능을 제공합니다.
 
 ---
 
-## 목차
-
-1. [만든 계기](#만든-계기)
-2. [소개](#소개)
-3. [주요 기능](#주요-기능)
-4. [기술 스택](#기술-스택)
-5. [왜 이런 선택을 했나 (ADR 요약)](#왜-이런-선택을-했나-adr-요약)
-6. [핵심 API 사용 예시](#핵심-api-사용-예시)
-7. [아키텍처 &amp; 디렉토리 구조](#아키텍처--디렉토리-구조)
-8. [사전 준비](#사전-준비)
-9. [환경 설정](#환경-설정)
-10. [빌드 &amp; 실행](#빌드--실행)
-11. [API 레퍼런스](#api-레퍼런스)
-12. [스케줄러 작업](#스케줄러-작업)
-13. [CI/CD (추가 예정)](#cicd-추가-예정)
-14. [테스트](#테스트)
-15. [컨트리뷰팅](#컨트리뷰팅)
-16. [Authors
-    ](#authors)
-
----
-
-## 만든 계기
-
-게임을 함께 즐기는 친구들과 약속을 잡을 때, 매번 “오늘 몇 시에 시작할까?”, “이번엔 무슨 게임을 하지?”를 다시 정해야 했습니다. 공지 채널은 금방 묻혀 유실되고, 엑셀로 정리해보려 했지만 관리의 불편함으로 곧 포기하게 되었습니다. 알림을 놓쳐 절반만 접속하거나, 시간이 겹쳐 예약이 중복되는 상황도 잦았습니다.
-
-이러한 문제를 해결하기 위해, **게임 모임에 특화된 작은 도구**를 직접 개발하기 시작했습니다. 서버(길드) 단위로 게임을 관리하고, 일정을 예약하면 시작 전에 푸시 알림으로 조용히 알려주는 서비스입니다. 복잡한 절차 없이 로그인과 참여가 가능하고, 특정인이 지속적으로 일정을 챙기지 않아도 모임이 자연스럽게 운영되도록 하는 것을 목표로 했습니다.
-
-- 우리가 중요하게 본 것
-  - 간단한 로그인과 합류: OAuth, 초대/참여 흐름 최소 마찰
-  - 잊지 않게, 시끄럽지 않게: 시작 전 푸시 리마인더, 불필요한 저장형 알림 최소화
-  - 모임답게: 서버별 게임/멤버/권한 관리, 가벼운 파티 기능
-  - 믿음직하게: JWT, 토큰 블랙리스트, 최소 권한의 보안 구성
-
----
-
-## 소개
-
-GameSync 백엔드는 게임 모임 주최자와 참여자 간에
-
-- **서버 생성·관리**
-- **게임 세션 예약·조회·통계**
-- **JWT 기반 인증 + Discord OAuth2 연동**
-- **스케줄러를 이용한 자동 정리 작업**
-
-등의 기능을 제공하는 Spring Boot 기반 마이크로서비스입니다.
-
----
-
-## 주요 기능
-
-- **인증 & 권한 관리**
-  - JWT 발급/검증, 토큰 블랙리스트 처리
-  - Discord OAuth2 로그인
-- **서버 관리**
-  - 서버 생성·삭제·수정
-  - 멤버 초대·강퇴, 관리자 권한 부여
-- **게임 관리**
-  - 기본(Default) 게임 목록 조회
-  - 서버별 커스텀 게임 CRUD
-- **타임테이블 예약**
-  - 중복 슬롯 자동 처리
-  - 게임별/날짜별 필터·정렬
-  - 서버별 예약 통계 조회
-- **스케줄러**
-  - 만료 토큰 정리
-  - 타임테이블 엔트리 자동 리셋
+## TL;DR (포트폴리오 하이라이트)
+- 인증/보안: JWT 24h 만료, 로그아웃 시 블랙리스트, OAuth2(Discord/Kakao)
+- 도메인: 서버/멤버/관리자, 초대코드, 커스텀 게임, 타임테이블
+- 통계 API: 최다 게임, 평균 슬롯, 피크 시간
+- 스케줄러: 분 단위 초기화, 매일 03:00 블랙리스트 정리, 알림 리마인더 설계
+- 푸시: 사용자 보유 토큰(FCM/APNs) 팬아웃, 카테고리별 알림
+- 운영: CORS, 무상태 아키텍처, 오류 표준화, AWS EC2+RDS 배포
 
 ---
 
 ## 기술 스택
-
-- **프레임워크:** Spring Boot 3.5.0 (Java 17)
-- **DB:** MySQL (AWS RDS)
-- **인증:** Spring Security, JWT, OAuth2 (Discord, Kakao)
-- **ORM:** Spring Data JPA (Hibernate)
-- **스케줄링:** `@Scheduled` (`cron` 및 `fixedRate`)
-- **빌드:** Gradle Wrapper
-- **배포:** AWS EC2 + CodeDeploy
-- **로깅/모니터링:**  AWS CloudWatch
+- Java 17, Spring Boot 3.5.x
+- Spring Security, Spring OAuth2 Client
+- Spring Data JPA (Hibernate) + MySQL(RDS), H2(Test)
+- JJWT, Firebase Admin SDK(FCM)
+- Gradle, AWS EC2/ALB/RDS, CloudWatch
 
 ---
 
-## 왜 이런 선택을 했나 (ADR 요약)
-
-- **인증: JWT + 토큰 블랙리스트**
-
-  - **대안**: 서버 세션, Redis 세션 스토어
-  - **선택 근거**: 다양한 클라이언트(웹/PWA) 환경에서 무상태 특성을 유지해 확장성과 배포 단순성을 확보하기 위함. 프록시/로드밸런서 뒤에서도 동작이 일관적임.
-  - **운영 포인트**: 로그아웃·탈취 대응을 위해 `BlacklistedToken`을 저장하고, 스케줄러로 만료 정리를 수행. 키 관리와 토큰 만료 정책을 명확히 문서화.
-- **예약 중복 방지: RDB 제약 + 트랜잭션**
-
-  - **대안**: 애플리케이션 레벨 락, 분산 락(Redis)
-  - **선택 근거**: 예약의 유일성은 데이터 계층에서 강제하는 것이 가장 신뢰도 높음. UNIQUE 제약/조건부 삽입으로 경쟁 상태를 스키마 차원에서 차단.
-  - **운영 포인트**: 사용자 친화적 오류 메시지로 매핑, 인덱스 설계와 쿼리 튜닝으로 성능 확보, 에러 코드 규격화.
-- **리마인더/리셋: Spring `@Scheduled` 기반**
-
-  - **대안**: 메시지 큐(Kafka/SQS) + 워커 아키텍처
-  - **선택 근거**: 초기 규모와 팀 역량을 고려해 운영 복잡도를 낮추는 접근을 우선. 요구가 증가하면 큐 기반으로 자연스럽게 전환 가능.
-  - **운영 포인트**: 지연/드리프트 모니터링 지표 정의, 스케줄러 인터페이스 분리로 교체 용이성 확보.
-- **인프라: ALB + EC2 + RDS**
-
-  - **대안**: API Gateway + Lambda, ECS/Fargate, App Runner
-  - **선택 근거**: 런타임/OS 제어가 가능해 실습·데모 환경에서 학습 가치가 높고, 비용·복잡도 균형이 양호함.
-  - **운영 포인트**: 헬스체크/롤백 정책 수립, ASG 확장 전략, 무중단 배포 절차 마련.
-- **네트워킹: 프라이빗 서브넷 + NAT egress**
-
-  - **대안**: 퍼블릭 EC2 + 보안그룹 제한
-  - **선택 근거**: 데이터 계층 접근 리소스를 비공개화하고, 외부 서비스(FCM) 호출은 NAT→IGW 경로로 최소 노출.
-  - **운영 포인트**: AZ별 NAT 가용성/비용 고려, 라우팅 테이블·보안그룹 일관성 점검.
-- **데이터베이스: MySQL (RDS)**
-
-  - **대안**: PostgreSQL, DynamoDB
-  - **선택 근거**: 트랜잭션/조인 지원과 성숙한 생태계, 팀 숙련도.
-  - **운영 포인트**: 마이그레이션(Flyway) 도입 여지, 인덱스/쿼리 최적화 계획 수립.
+## 주요 기능
+- JWT 기반 인증, 토큰 블랙리스트(로그아웃/탈취 대응)
+- OAuth2 로그인(Discord/Kakao) → 토큰/사용자 정보 프론트 전달
+- 서버(Server) 생성/검색/참여/초대코드, 관리자 위임/회수, 강퇴, 삭제/탈퇴
+- 타임테이블 예약/조회/통계(최다 게임·평균·피크)
+- 커스텀 게임 추가/삭제 및 해당 게임 예약 사용자 목록
+- 분단위 초기화 스케줄러, 매일 03:00 블랙리스트 정리
+- 감사 로그(Audit): 생성/참가/탈퇴/권한변경 기록
 
 ---
 
-## 핵심 API 사용 예시
-
-- **인증 토큰 발급**
-
-```bash
-curl -s -X POST \
-  -H "Content-Type: application/json" \
-  -d '{"username":"demo@example.com","password":"pass1234"}' \
-  http://localhost:8080/api/auth/login
-```
-
-응답 예시:
-
-```json
-{
-  "token": "<JWT>",
-  "message": "로그인 성공"
-}
-```
-
-- **서버 생성**
-
-```bash
-curl -s -X POST \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer <JWT>" \
-  -d '{"name":"우리길드","resetTime":"03:00"}' \
-  http://localhost:8080/api/servers
-```
-
-응답 예시:
-
-```json
-{
-  "id": 123,
-  "name": "우리길드",
-  "resetTime": "03:00"
-}
-```
-
-- **타임테이블 예약 등록**
-
-```bash
-curl -s -X POST \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer <JWT>" \
-  -d '{"slot":"2025-08-20T21:00:00Z","defaultGameId":1}' \
-  http://localhost:8080/api/servers/123/timetable
-```
-
-- **친구 요청 보내기**
-
-```bash
-curl -s -X POST \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer <JWT>" \
-  -d '{"friendCode":"ABCD-1234"}' \
-  http://localhost:8080/api/friends/request
-```
-
-- **권한/오류 예시 (401 Unauthorized)**
-
-```bash
-curl -i http://localhost:8080/api/servers
-```
-
-```http
-HTTP/1.1 401 Unauthorized
-WWW-Authenticate: Bearer
-Content-Type: application/json
-
-{"error":"UNAUTHORIZED","message":"Authentication is required"}
-```
-
----
-
-## 아키텍처 & 디렉토리 구조
-
+## 아키텍처 & 디렉토리
 ```
 src
 └─ main
    ├─ java/com/example/scheduler
-   │   ├─ config            # 초기화, Firebase 등 구성
-   │   ├─ controller        # REST API 엔드포인트
-   │   ├─ dto               # Request/Response 객체
-   │   ├─ domain            # JPA 엔터티
-   │   ├─ repository        # Spring Data JPA 리포지토리
-   │   ├─ scheduler         # 토큰 정리·타임테이블 리셋·리마인더
-   │   ├─ security          # JWT 필터·OAuth2 핸들러
-   │   └─ service           # 비즈니스 로직
+   │   ├─ config        # 초기화, 부트스트랩
+   │   ├─ controller    # REST API
+   │   ├─ dto           # Request/Response
+   │   ├─ domain        # JPA 엔터티(User/Server/Timetable/...)
+   │   ├─ repository    # Spring Data JPA
+   │   ├─ scheduler     # 리셋/블랙리스트 정리 스케줄러
+   │   ├─ security      # JWT 필터, OAuth2 Success 핸들러
+   │   └─ service       # 비즈니스 로직, 권한 검사, 통계
    └─ resources
-       └─ default_games.txt
+       └─ application.properties, default_games.txt
 ```
 
 ---
 
-## AWS 구성도(수정)
-
-![AWS 구성도(수정)](./aws구성도%28수정%29.png)
-
-## ERD
-
-![ERD](./erd.png)
-
----
-
-## 사전 준비
-
-- **Java 22** 이상 설치
-- **MySQL 8** 이상 인스턴스 (AWS RDS 권장)
-- **Gradle Wrapper** (프로젝트에 포함)
-
----
-
-## 환경 설정
-
-`src/main/resources/application.properties` 또는 환경 변수:
-
+## 설정 예시 (application.properties)
 ```properties
-# 서버 포트
 server.port=8080
 
-# 데이터베이스
-spring.datasource.url=jdbc:mysql://<HOST>:3306/<DB_NAME>?useSSL=false&serverTimezone=UTC
-spring.datasource.username=<DB_USER>
-spring.datasource.password=<DB_PASSWORD>
+# DB
+spring.datasource.url=jdbc:mysql://<HOST>:3306/scheduler_db?serverTimezone=Asia/Seoul&useSSL=false
+spring.datasource.username=<USER>
+spring.datasource.password=<PASS>
 
 # JPA
 spring.jpa.hibernate.ddl-auto=update
-spring.jpa.show-sql=true
+spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.MySQL8Dialect
 
-# JWT
-jwt.secret=<YOUR_JWT_SECRET>
-jwt.expiration-ms=3600000
+# JWT (24h)
+jwt.secret=<BASE64_SECRET>
+jwt.expiration-ms=86400000
 
-# Discord OAuth2
+# OAuth2 (Discord/Kakao)
 spring.security.oauth2.client.registration.discord.client-id=<CLIENT_ID>
 spring.security.oauth2.client.registration.discord.client-secret=<CLIENT_SECRET>
 spring.security.oauth2.client.registration.discord.redirect-uri={baseUrl}/login/oauth2/code/{registrationId}
-spring.security.oauth2.client.registration.discord.authorization-grant-type=authorization_code
 spring.security.oauth2.client.registration.discord.scope=identify,email
 spring.security.oauth2.client.provider.discord.authorization-uri=https://discord.com/api/oauth2/authorize
 spring.security.oauth2.client.provider.discord.token-uri=https://discord.com/api/oauth2/token
 spring.security.oauth2.client.provider.discord.user-info-uri=https://discord.com/api/users/@me
 spring.security.oauth2.client.provider.discord.user-name-attribute=id
- 
-# Kakao OAuth2
+
 spring.security.oauth2.client.registration.kakao.client-id=<CLIENT_ID>
 spring.security.oauth2.client.registration.kakao.client-secret=<CLIENT_SECRET>
 spring.security.oauth2.client.registration.kakao.redirect-uri={baseUrl}/login/oauth2/code/{registrationId}
@@ -280,28 +89,79 @@ spring.security.oauth2.client.provider.kakao.authorization-uri=https://kauth.kak
 spring.security.oauth2.client.provider.kakao.token-uri=https://kauth.kakao.com/oauth/token
 spring.security.oauth2.client.provider.kakao.user-info-uri=https://kapi.kakao.com/v2/user/me
 spring.security.oauth2.client.provider.kakao.user-name-attribute=id
- 
-# Firebase Admin (권장: 환경 변수 사용)
-# GOOGLE_APPLICATION_CREDENTIALS=/absolute/path/to/service-account.json
+
+# Front/Back base URL & callbacks
+app.frontend.base-url=https://<frontend-host>
+app.frontend.discord-callback-path=/auth/discord/callback
+app.frontend.kakao-callback-path=/auth/kakao/callback
+app.backend.base-url=https://<backend-host>
+
+# CORS
+app.cors.allowed-origins=https://<frontend-host>,http://localhost:3000
+
+# Firebase Admin (환경 변수 권장)
+# GOOGLE_APPLICATION_CREDENTIALS=/abs/path/service-account.json
 ```
 
 ---
 
+## 인증/보안 개요
+- 폼 로그인 및 OAuth2(Discord/Kakao) 지원 → `OAuth2LoginSuccessHandler`에서 JWT 발급 후 프론트 콜백으로 리다이렉트
+- `JwtAuthenticationFilter`에서 서명/만료/블랙리스트 검사 후 SecurityContext 구성
+- 만료 24시간(`jwt.expiration-ms=86400000`), 로그아웃 시 `BlacklistedToken` 테이블에 만료 시각과 함께 저장
+- CORS 허용 도메인 제한, STATELESS 세션, 최소 권한(Role: USER)
+
+---
+
+## 스케줄러
+- 매분: 각 `Server.resetTime`과 현재 시각이 일치 시 해당 서버 타임테이블 엔트리 초기화
+- 매일 03:00: 만료된 블랙리스트 토큰 정리
+- (설계) 합류 N분 전 푸시 리마인더 트리거
+
+---
+
+## API 요약(발췌)
+- 인증
+  - `POST /api/auth/signup` – 회원가입
+  - `POST /api/auth/login` – 로그인 → `{ token, userId, nickname }`
+  - `POST /api/auth/logout` – 로그아웃(토큰 블랙리스트 등록)
+- 서버
+  - `GET /api/servers` – 서버 목록, `GET /api/servers/{id}` – 상세
+  - `POST /api/servers` – 생성, `POST /api/servers/{id}/join` – 참가
+  - `PUT /api/servers/{id}/name` – 이름 변경, `PUT /api/servers/{id}/reset-time` – 초기화 시간 변경
+  - `POST /api/servers/{id}/admins` – 관리자 임명/해제, `POST /api/servers/{id}/kick` – 강퇴
+  - `DELETE /api/servers/{id}` – 삭제, `POST /api/servers/{id}/leave` – 떠나기
+- 게임/타임테이블
+  - `GET /api/games/default` – 기본 게임 목록
+  - `GET /api/servers/{id}/custom-games` – 커스텀 게임 목록, `POST /api/servers/{id}/custom-games` – 추가
+  - `DELETE /api/servers/{id}/custom-games/{gameId}` – 삭제(연관 엔트리 정리)
+  - `GET /api/servers/{id}/timetable` – 예약 목록(필터/정렬), `POST /api/servers/{id}/timetable` – 예약 등록
+  - `GET /api/servers/{id}/timetable/stats` – 최다 게임/평균/피크
+
+> 상세 스펙은 `controller/`와 `dto/` 참조.
+
+---
+
+## 데이터 모델(요약)
+- `User(id, username, nickname, password?, discordId?, email?)`
+- `Server(id, name, owner, members[], admins[], inviteCode, resetTime)`
+- `TimetableEntry(id, server, user, slot, defaultGame?, customGame?)`
+- `DefaultGame(id, name)` / `CustomGame(id, name, server)`
+- `AuditLog(id, serverId, userId, action, occurredAt, details)`
+- `BlacklistedToken(id, token, expiry)`
+
+---
+
 ## 빌드 & 실행
-
 ```bash
-# 프로젝트 루트에서
 ./gradlew clean build
-
-# JAR 실행
 java -jar build/libs/gamesync-backend-0.0.1-SNAPSHOT.jar
 
 # 개발 모드
 ./gradlew bootRun
 ```
 
-Windows(PowerShell/명령 프롬프트):
-
+Windows:
 ```bat
 gradlew.bat clean build
 java -jar build\libs\gamesync-backend-0.0.1-SNAPSHOT.jar
@@ -310,133 +170,21 @@ gradlew.bat bootRun
 
 ---
 
-## API 레퍼런스
-
-### 인증
-
-| 메서드 | 경로                 | 설명                                                     |
-| ------ | -------------------- | -------------------------------------------------------- |
-| POST   | `/api/auth/signup` | `{ username, password }` → `{ message }`            |
-| POST   | `/api/auth/login`  | `{ username, password }` → `{ token, message }`     |
-| POST   | `/api/auth/logout` | 헤더 `Authorization: Bearer <token>` (블랙리스트 추가) |
-
-### 서버
-
-| 메서드 | 경로                             | 설명                                      |
-| ------ | -------------------------------- | ----------------------------------------- |
-| GET    | `/api/servers`                 | 가입/참가 가능 서버 목록 조회             |
-| POST   | `/api/servers`                 | `{ name, resetTime }` → 서버 생성      |
-| GET    | `/api/servers/{id}`            | 서버 상세 조회                            |
-| POST   | `/api/servers/{id}/join`       | 서버 참가                                 |
-| PUT    | `/api/servers/{id}/name`       | `{ name }` → 서버 이름 변경            |
-| PUT    | `/api/servers/{id}/reset-time` | `{ resetTime }` → 초기화 시간 변경     |
-| DELETE | `/api/servers/{id}`            | 서버 삭제                                 |
-| POST   | `/api/servers/{id}/kick`       | `{ userId }` → 멤버 강퇴               |
-| POST   | `/api/servers/{id}/admins`     | `{ userId, grant }` → 관리자 임명/해제 |
-
-### 즐겨찾기
-
-| 메서드 | 경로                                  | 설명          |
-| ------ | ------------------------------------- | ------------- |
-| GET    | `/api/servers/favorites`            | 즐겨찾기 목록 |
-| POST   | `/api/servers/{id}/favorite/toggle` | 즐겨찾기 토글 |
-
-### 게임
-
-| 메서드 | 경로                                              | 설명                             |
-| ------ | ------------------------------------------------- | -------------------------------- |
-| GET    | `/api/games/default`                            | 기본 게임 목록 조회              |
-| GET    | `/api/servers/{id}/custom-games`                | 커스텀 게임 목록 조회            |
-| POST   | `/api/servers/{id}/custom-games`                | `{ name }` → 커스텀 게임 추가 |
-| DELETE | `/api/servers/{id}/custom-games/{customGameId}` | 커스텀 게임 삭제                 |
-
-### 타임테이블
-
-| 메서드 | 경로                                  | 설명                                                     |
-| ------ | ------------------------------------- | -------------------------------------------------------- |
-| GET    | `/api/servers/{id}/timetable`       | 예약 목록 (게임/정렬 필터 지원)                          |
-| POST   | `/api/servers/{id}/timetable`       | `{ slot, defaultGameId?, customGameId? }` → 예약 등록 |
-| GET    | `/api/servers/{id}/timetable/stats` | 서버별 예약 통계 조회                                    |
-
-### 친구
-
-| 메서드 | 경로                            | 설명      |
-| ------ | ------------------------------- | --------- |
-| GET    | `/api/friends`                | 친구 목록 |
-| POST   | `/api/friends/request`        | 친구 요청 |
-| POST   | `/api/friends/accept`         | 친구 수락 |
-| POST   | `/api/friends/reject`         | 친구 거절 |
-| DELETE | `/api/friends/{friendUserId}` | 친구 삭제 |
-
-### 파티
-
-| 메서드 | 경로                             | 설명      |
-| ------ | -------------------------------- | --------- |
-| GET    | `/api/servers/{id}/parties`    | 파티 목록 |
-| POST   | `/api/servers/{id}/parties`    | 파티 생성 |
-| POST   | `/api/parties/{partyId}/join`  | 파티 참가 |
-| POST   | `/api/parties/{partyId}/leave` | 파티 탈퇴 |
-| DELETE | `/api/parties/{partyId}`       | 파티 삭제 |
-
----
-
-## 스케줄러 작업
-
-- **BlacklistCleanupScheduler**
-
-  - Cron: `0 0 3 * * *` (매일 03:00)
-  - 설명: 만료된 토큰을 데이터베이스에서 삭제
-- **TimetableResetScheduler**
-
-  - Fixed Rate: 60초 (`@Scheduled(fixedRate = 60000)`)
-  - 설명: 서버별 `resetTime` 도달 시 해당 서버의 모든 타임테이블 엔트리 초기화
-- **TimetableReminderScheduler**
-
-  - Fixed Rate: 60초
-  - 설명: 사용자 설정된 N분 전 합류시간 푸시 리마인더 발송(저장형 알림 미생성)
-
----
-
-## CI/CD (추가 예정)
-
-- **GitHub Actions**
-
-  - Gradle 캐시 + 빌드/테스트, 아티팩트(S3 업로드)
-  - OIDC로 AWS AssumeRole (IAM) → 자격증명 없이 안전하게 배포
-  - 브랜치/태그 전략에 따라 배포 트리거 분기
-- **CodeDeploy Blue/Green + ASG**
-
-  - ALB 2개 Target Group 간 트래픽 스위치, 헬스체크 실패 시 자동 롤백
-  - Auto Scaling Group 기반 다중 AZ, 배포 중 용량/트래픽 분할 설정
-  - AppSpec 훅: BeforeInstall/AfterInstall/ApplicationStart/ValidateService
-- **필요 리소스/시크릿(요약)**
-
-  - S3 버킷(아티팩트), CodeDeploy App/DeploymentGroup(Blue/Green)
-  - ALB + Target Groups, ASG + Launch Template, IAM 역할(액션스 OIDC)
-  - Repo secrets: `AWS_REGION`, `AWS_ROLE_ARN`, `S3_BUCKET`, `CODEDEPLOY_APP`, `CODEDEPLOY_GROUP`
-- **추가 계획**
-
-  - `.github/workflows/deploy.yml`, `appspec.yml`, 배포 스크립트 및 헬스체크 문서화 예정
+## 운영/배포 노트
+- AWS EC2 + ALB + RDS, 헬스체크 엔드포인트 `/healthcheck`
+- CloudWatch 로그 수집, 롤백 기준 정의(헬스체크 실패/에러율)
+- 시크릿/키: SSM 또는 환경변수 주입, JWT 키는 Base64로 관리
 
 ---
 
 ## 테스트
-
 ```bash
 ./gradlew test
 ```
-
-- **JUnit** 기반 통합 테스트
-
-## Authors
-
-- **최영찬**
-
-  - 전체 아키텍처 및 보안 설계
-  - 인증/인가, 스케줄러, 주요 API 엔드포인트 구현
-- **정승수**
-
-  - GameService, TimetableService 구현 및 테스트
-  - 예외 처리, 문서 보강
+- H2 기반 통합 테스트, Spring Security Test
 
 ---
+
+## Authors
+- Lead: 전체 아키텍처/보안, 인증·스케줄러·핵심 API 설계 및 구현
+- Team: Game/Timetable 서비스 구현, 예외 처리/문서 보강
