@@ -67,6 +67,8 @@ public class SecurityConfig {
                                 "/api/auth/**",
                                 "/oauth2/**",
                                 "/login/oauth2/**",
+                                "/api/notices",
+                                "/api/notices/*",
                                 "/error",
                                 "/healthcheck",
                                 "/actuator/health",
