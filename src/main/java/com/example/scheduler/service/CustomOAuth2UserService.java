@@ -35,6 +35,8 @@ public class CustomOAuth2UserService implements OAuth2UserService<OAuth2UserRequ
 			return handleDiscord(oauthUser);
 		} else if ("kakao".equalsIgnoreCase(registrationId)) {
 			return handleKakao(oauthUser);
+		} else if ("apple".equalsIgnoreCase(registrationId)) {
+			return handleApple(oauthUser);
 		}
 
 		throw new OAuth2AuthenticationException("Unsupported OAuth2 provider: " + registrationId);
@@ -195,6 +197,63 @@ public class CustomOAuth2UserService implements OAuth2UserService<OAuth2UserRequ
 						"nickname", user.getNickname(),
 						"email", user.getEmail(),
 						"provider", "kakao"
+				),
+				"id"
+		);
+	}
+
+	private OAuth2User handleApple(OAuth2User oauthUser) {
+		// Apple OpenID Connect: id_token claims provide 'sub' and optionally 'email'
+		String sub = oauthUser.getAttribute("sub");
+		String email = oauthUser.getAttribute("email");
+		String username = (sub != null) ? ("apple_" + sub) : null;
+		String nickname = username;
+
+		// 1) Existing by appleId
+		User user = userRepository.findByAppleId(sub).orElse(null);
+
+		// 2) Email conflict check
+		if (user == null && email != null && !email.isBlank()) {
+			User byEmail = userRepository.findByEmail(email).orElse(null);
+			if (byEmail != null) {
+				if (byEmail.getDiscordId() != null && !byEmail.getDiscordId().isBlank()) {
+					throw new org.springframework.security.oauth2.core.OAuth2AuthenticationException("oauth_email_linked:discord");
+				}
+				if (byEmail.getKakaoId() != null && !byEmail.getKakaoId().isBlank()) {
+					throw new org.springframework.security.oauth2.core.OAuth2AuthenticationException("oauth_email_linked:kakao");
+				}
+				if (byEmail.getAppleId() != null && !byEmail.getAppleId().isBlank()) {
+					throw new org.springframework.security.oauth2.core.OAuth2AuthenticationException("oauth_email_linked:apple");
+				}
+				throw new org.springframework.security.oauth2.core.OAuth2AuthenticationException("oauth_email_linked:local");
+			}
+		}
+
+		// 3) Create new user
+		if (user == null) {
+			User u = new User();
+			u.setAppleId(sub);
+			u.setUsername(username);
+			u.setNickname(nickname);
+			u.setEmail(email);
+			u.setAdmin(false);
+			u.setFriendCode(friendCodeService.generateUniqueFriendCode());
+			user = userRepository.save(u);
+		}
+
+		boolean dirty = false;
+		if (email != null && !email.equals(user.getEmail())) { user.setEmail(email); dirty = true; }
+		if (user.getFriendCode() == null || user.getFriendCode().isBlank()) { user.setFriendCode(friendCodeService.generateUniqueFriendCode()); dirty = true; }
+		if (dirty) userRepository.save(user);
+
+		return new org.springframework.security.oauth2.core.user.DefaultOAuth2User(
+				org.springframework.security.core.authority.AuthorityUtils.createAuthorityList("ROLE_USER"),
+				java.util.Map.of(
+						"id", sub,
+						"username", username,
+						"nickname", user.getNickname(),
+						"email", user.getEmail(),
+						"provider", "apple"
 				),
 				"id"
 		);
