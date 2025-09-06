@@ -33,9 +33,6 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
     @Value("${app.frontend.kakao-callback-path:/auth/kakao/callback}")
     private String kakaoCallbackPath;
 
-    @Value("${app.frontend.apple-callback-path:/auth/apple/callback}")
-    private String appleCallbackPath;
-
     @Value("${app.ios.scheme:gamesync://}")
     private String iosScheme;
 
@@ -58,8 +55,6 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
         User user;
         if ("kakao".equalsIgnoreCase(provider)) {
             user = userRepo.findByKakaoId(externalId).orElseThrow();
-        } else if ("apple".equalsIgnoreCase(provider)) {
-            user = userRepo.findByAppleId(externalId).orElseThrow();
         } else {
             user = userRepo.findByDiscordId(externalId).orElseThrow();
             provider = "discord";
@@ -75,7 +70,7 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
         String encodedUser = URLEncoder.encode(userJson, StandardCharsets.UTF_8);
 
         // properties 로 뺀 값 사용
-        String callbackPath = "discord".equalsIgnoreCase(provider) ? discordCallbackPath : ("kakao".equalsIgnoreCase(provider) ? kakaoCallbackPath : appleCallbackPath);
+        String callbackPath = "discord".equalsIgnoreCase(provider) ? discordCallbackPath : kakaoCallbackPath;
 
         // oauth_target 쿠키 값(app | mobile-web | web)에 따라 최종 목적지를 분기
         String oauthTarget = null;

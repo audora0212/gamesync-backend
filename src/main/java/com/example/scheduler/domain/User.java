@@ -32,9 +32,6 @@ public class User {
     @Column(unique = true)
     private String kakaoId;               // Kakao 고유 ID
 
-    @Column(unique = true)
-    private String appleId;               // Apple 고유 ID (sub)
-
     @Column(unique = true, nullable = true)
     private String email;                 // ← 새로 추가된 이메일 필드
 
