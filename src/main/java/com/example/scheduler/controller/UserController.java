@@ -93,4 +93,12 @@ public class UserController {
         String username = auth.getName();
         return ResponseEntity.ok(userService.updatePushSettings(username, req));
     }
+
+    /** 회원 탈퇴: 서버 제외/파티/스케줄/친구/알림 등 데이터 정리 후 계정 삭제 */
+    @DeleteMapping
+    public ResponseEntity<Void> deleteMe(Authentication auth) {
+        String username = auth.getName();
+        userService.deleteCurrentUserCascade(username);
+        return ResponseEntity.noContent().build();
+    }
 }

@@ -13,6 +13,8 @@ public interface ServerRepository extends JpaRepository<Server, Long> {
     List<Server> findByResetTime(LocalTime resetTime);
     // 내가 속한 서버 목록 조회
     List<Server> findByMembersContains(User user);
+    // 내가 소유한 서버 목록 조회
+    List<Server> findByOwner(User owner);
 
     // 이름 검색 + 페이징
     Page<Server> findByNameContainingIgnoreCase(String name, Pageable pageable);
