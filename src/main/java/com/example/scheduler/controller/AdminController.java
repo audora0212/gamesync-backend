@@ -20,6 +20,7 @@ import java.util.List;
 public class AdminController {
     private final AuditLogRepository auditRepo;
     private final ServerRepository serverRepo;
+    private final com.example.scheduler.repository.UserRepository userRepo;
     private final TimetableEntryRepository entryRepo;
     private final PartyRepository partyRepo;
 
@@ -57,7 +58,9 @@ public class AdminController {
             stream = stream.filter(l -> finalActions.contains(l.getAction()));
         }
         var list = stream.map(l -> new AdminDto.AuditLogItem(
-                l.getId(), l.getServerId(), l.getUserId(), l.getAction(), l.getDetails(), l.getOccurredAt()
+                l.getId(), l.getServerId(), l.getUserId(),
+                (l.getUserId()!=null? userRepo.findById(l.getUserId()).map(u->u.getNickname()).orElse(null):null),
+                l.getAction(), l.getDetails(), l.getOccurredAt()
         )).toList();
         return ResponseEntity.ok(list);
     }
@@ -69,7 +72,9 @@ public class AdminController {
                 .filter(l -> id.equals(l.getServerId()))
                 .filter(l -> "JOIN_SERVER".equals(l.getAction()))
                 .map(l -> new AdminDto.AuditLogItem(
-                        l.getId(), l.getServerId(), l.getUserId(), l.getAction(), l.getDetails(), l.getOccurredAt()
+                        l.getId(), l.getServerId(), l.getUserId(),
+                        (l.getUserId()!=null? userRepo.findById(l.getUserId()).map(u->u.getNickname()).orElse(null):null),
+                        l.getAction(), l.getDetails(), l.getOccurredAt()
                 )).toList();
         return ResponseEntity.ok(list);
     }

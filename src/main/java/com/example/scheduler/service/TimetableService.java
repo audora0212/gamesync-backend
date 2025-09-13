@@ -70,7 +70,7 @@ public class TimetableService {
             String details = String.format("game=%s;slot=%s", safeGameName(e), e.getSlot().toString());
             auditService.log(srv.getId(), user.getId(), "TIMETABLE_REGISTER", details);
         } catch (Exception ignored) {}
-        // 알림: 같은 서버의 내 친구들에게 통지 (JSON payload에 serverId 포함)
+        // 알림: 같은 서버의 내 친구들에게 통지 (JSON payload에 serverId 포함) - 집계 전송
         notifyFriendsInServer(user, srv, e);
         return toResp(e);
     }
@@ -223,29 +223,25 @@ public class TimetableService {
         friendsA.forEach(u -> friendIds.add(u.getId()));
         friendsB.forEach(u -> friendIds.add(u.getId()));
 
-        // 같은 서버 멤버 중 친구에게만 알림
+        // 같은 서버 멤버 중 친구에게만 알림을 모아서 한 번에 전송
+        java.util.List<User> targets = new java.util.ArrayList<>();
         for (User m : server.getMembers()) {
             if (!m.getId().equals(actor.getId()) && friendIds.contains(m.getId())) {
-                String gameName = (entry.getCustomGame() != null)
-                        ? entry.getCustomGame().getName()
-                        : entry.getDefaultGame().getName();
-                // 패널 표시 여부는 사용자 설정에 따라 NotificationService에서 결정
-                // payload는 JSON: kind=timetable, serverId 포함 → 클릭 시 해당 서버로 이동 가능
-                String payload = String.format(
-                        "{\"kind\":\"timetable\",\"serverId\":%d,\"serverName\":\"%s\",\"fromNickname\":\"%s\",\"gameName\":\"%s\"}",
-                        server.getId(),
-                        safe(server.getName()),
-                        safe(actor.getNickname()),
-                        safe(gameName)
-                );
-                notificationService.notifyIfFriendEnabled(
-                        m, // owner(수신자)
-                        actor, // friend(발신자)
-                        com.example.scheduler.domain.NotificationType.TIMETABLE,
-                        "친구의 스케줄 등록",
-                        payload
-                );
+                targets.add(m);
             }
+        }
+        if (!targets.isEmpty()) {
+            String gameName = (entry.getCustomGame() != null)
+                    ? entry.getCustomGame().getName()
+                    : entry.getDefaultGame().getName();
+            String payload = String.format(
+                    "{\"kind\":\"timetable\",\"serverId\":%d,\"serverName\":\"%s\",\"fromNickname\":\"%s\",\"gameName\":\"%s\"}",
+                    server.getId(),
+                    safe(server.getName()),
+                    safe(actor.getNickname()),
+                    safe(gameName)
+            );
+            notificationService.notifyMany(targets, com.example.scheduler.domain.NotificationType.TIMETABLE, "친구의 스케줄 등록", payload, server.getId());
         }
     }
 

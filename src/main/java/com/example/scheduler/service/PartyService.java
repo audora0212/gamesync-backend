@@ -88,22 +88,23 @@ public class PartyService {
             auditService.log(server.getId(), user.getId(), "PARTY_JOIN", details);
         } catch (Exception ignored) {}
 
-        // 서버 모든 멤버에게 파티 모집 알림 (소유자 제외 가능)
+        // 서버 모든 멤버에게 파티 모집 알림 (소유자 제외 가능) - 팬아웃을 notifyMany로 집계
+        java.util.List<User> targets = new java.util.ArrayList<>();
         for (User m : server.getMembers()) {
             if (m.getId().equals(user.getId())) continue;
-            String gameName = (saved.getCustomGame() != null) ? saved.getCustomGame().getName() : saved.getDefaultGame().getName();
-            String title = "파티 모집";
-            // payload는 JSON: kind=party, serverId 포함 → 클릭 시 해당 서버로 이동 가능
-            String payload = String.format(
-                    "{\"kind\":\"party\",\"serverId\":%d,\"serverName\":\"%s\",\"fromNickname\":\"%s\",\"gameName\":\"%s\",\"capacity\":%d}",
-                    server.getId(),
-                    safe(server.getName()),
-                    safe(user.getNickname()),
-                    safe(gameName),
-                    saved.getCapacity()
-            );
-            notificationService.notify(m, com.example.scheduler.domain.NotificationType.PARTY, title, payload);
+            targets.add(m);
         }
+        String gameName = (saved.getCustomGame() != null) ? saved.getCustomGame().getName() : saved.getDefaultGame().getName();
+        String title = "파티 모집";
+        String payload = String.format(
+                "{\"kind\":\"party\",\"serverId\":%d,\"serverName\":\"%s\",\"fromNickname\":\"%s\",\"gameName\":\"%s\",\"capacity\":%d}",
+                server.getId(),
+                safe(server.getName()),
+                safe(user.getNickname()),
+                safe(gameName),
+                saved.getCapacity()
+        );
+        notificationService.notifyMany(targets, com.example.scheduler.domain.NotificationType.PARTY, title, payload, server.getId());
 
         return toResp(saved);
     }

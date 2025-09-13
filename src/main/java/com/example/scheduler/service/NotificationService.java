@@ -189,6 +189,131 @@ public class NotificationService {
         }
     }
 
+    /** 여러 사용자에게 동일 알림을 전송하고, 하나의 감사 로그로 집계한다. */
+    @Transactional
+    public void notifyMany(java.util.List<User> recipients, NotificationType type, String title, String message, Long serverIdHint) {
+        if (recipients == null || recipients.isEmpty()) return;
+        try {
+            java.util.HashMap<String, String> data = new java.util.HashMap<>();
+            data.put("type", type.name());
+            if (message != null) data.put("payload", message);
+
+            String pushBody = null;
+            String clickUrl = null;
+            Long serverIdForAudit = serverIdHint;
+            if (message != null) {
+                String trimmed = message.trim();
+                if (trimmed.startsWith("{") && trimmed.endsWith("}")) {
+                    try {
+                        com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+                        com.fasterxml.jackson.databind.JsonNode node = mapper.readTree(trimmed);
+                        String kind = node.has("kind") ? node.get("kind").asText(null) : null;
+                        if ("friend_request".equals(kind)) {
+                            String from = node.has("fromNickname") ? node.get("fromNickname").asText("상대방") : "상대방";
+                            pushBody = from + " 님이 친구 요청을 보냈습니다.";
+                            clickUrl = "/dashboard?friends=1";
+                        } else if ("server_invite".equals(kind)) {
+                            String from = node.has("fromNickname") ? node.get("fromNickname").asText("상대방") : "상대방";
+                            String serverName = node.has("serverName") ? node.get("serverName").asText("") : "";
+                            pushBody = from + " → " + serverName;
+                            if (node.has("inviteId")) {
+                                long inviteId = node.get("inviteId").asLong();
+                                clickUrl = "/invite/by-id?inviteId=" + inviteId;
+                            }
+                        } else if ("timetable".equals(kind)) {
+                            String from = node.has("fromNickname") ? node.get("fromNickname").asText("친구") : "친구";
+                            String serverName = node.has("serverName") ? node.get("serverName").asText("") : "";
+                            String gameName = node.has("gameName") ? node.get("gameName").asText("") : "";
+                            pushBody = String.format("%s님이 %s 서버에 %s 예약을 등록했습니다.", from, serverName, gameName);
+                            if (node.has("serverId")) {
+                                long serverId = node.get("serverId").asLong();
+                                serverIdForAudit = (serverIdForAudit == null) ? serverId : serverIdForAudit;
+                                clickUrl = "/server/" + serverId;
+                            }
+                        } else if ("party".equals(kind)) {
+                            String from = node.has("fromNickname") ? node.get("fromNickname").asText("사용자") : "사용자";
+                            String serverName = node.has("serverName") ? node.get("serverName").asText("") : "";
+                            String gameName = node.has("gameName") ? node.get("gameName").asText("") : "";
+                            Integer capacity = node.has("capacity") ? node.get("capacity").asInt(0) : 0;
+                            if (node.has("serverId")) {
+                                long serverId = node.get("serverId").asLong();
+                                serverIdForAudit = (serverIdForAudit == null) ? serverId : serverIdForAudit;
+                                clickUrl = "/server/" + serverId + "?open=party";
+                            }
+                            pushBody = String.format("%s님이 %s에서 %s 파티를 모집합니다 (%d명)", from, serverName, gameName, capacity);
+                        } else {
+                            pushBody = message;
+                        }
+                    } catch (Exception ignore) {
+                        pushBody = message;
+                    }
+                } else {
+                    pushBody = message;
+                }
+            }
+
+            if (clickUrl != null && !clickUrl.isBlank()) {
+                data.put("url", clickUrl);
+            }
+
+            String bodyToSend = (pushBody != null && pushBody.length() <= 120) ? pushBody : null;
+            java.util.List<User> delivered = new java.util.ArrayList<>();
+            for (User r : recipients) {
+                // 저장형 알림(패널) 생성: TIMETABLE은 per-user 설정에 따라 표시/미표시
+                boolean skipPanel = false;
+                if (type == NotificationType.TIMETABLE) {
+                    Boolean on = r.getPushFriendScheduleEnabled();
+                    skipPanel = Boolean.FALSE.equals(on);
+                }
+                if (!skipPanel) {
+                    try {
+                        Notification n = Notification.builder()
+                                .user(r)
+                                .type(type)
+                                .title(title)
+                                .message(message)
+                                .read(false)
+                                .createdAt(LocalDateTime.now())
+                                .build();
+                        notificationRepository.save(n);
+                    } catch (Exception ignored) {}
+                }
+
+                // 푸시 전송 (카테고리별 on/off 적용)
+                if (!allowPush(r, type)) continue;
+                try {
+                    pushService.pushToUser(r, title, bodyToSend, data);
+                    delivered.add(r);
+                } catch (Exception ignored) {}
+            }
+
+            // 감사 로그 집계: actor + 수신자 다수 표시
+            Long actorUserId = null;
+            try {
+                var auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+                if (auth != null) {
+                    String username = auth.getName();
+                    actorUserId = userRepository.findByUsername(username).map(User::getId).orElse(null);
+                }
+            } catch (Exception ignored) {}
+
+            String shortTitle = title != null ? (title.length() > 120 ? title.substring(0, 120) : title) : null;
+            String shortMsg = message != null ? (message.length() > 400 ? message.substring(0, 400) : message) : null;
+            String safeUrl = (clickUrl != null && clickUrl.length() > 200) ? clickUrl.substring(0, 200) : clickUrl;
+            String recipientsSummary = delivered.stream()
+                    .map(u -> u.getId() + "(" + (u.getNickname()!=null?u.getNickname():"") + ")")
+                    .collect(java.util.stream.Collectors.joining(","));
+            String details = String.format(
+                    "toUsers=[%s] type=%s title=%s msg=%s url=%s",
+                    recipientsSummary, type.name(), String.valueOf(shortTitle), String.valueOf(shortMsg), String.valueOf(safeUrl)
+            );
+            auditService.log(serverIdForAudit, actorUserId, "PUSH_NOTIFY", details);
+        } catch (Exception ignored) {
+            org.slf4j.LoggerFactory.getLogger(NotificationService.class)
+                    .warn("Push-many dispatch skipped due to exception");
+        }
+    }
+
     public void notifyIfFriendEnabled(User owner, User friend, NotificationType type, String title, String message) {
         if (Boolean.FALSE.equals(owner.getNotificationsEnabled())) return;
         boolean enabled = friendNotiRepo.findByOwnerAndFriend(owner, friend)

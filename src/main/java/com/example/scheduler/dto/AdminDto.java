@@ -11,6 +11,7 @@ public class AdminDto {
         private Long id;
         private Long serverId;
         private Long userId;
+        private String userNickname;
         private String action;
         private String details;
         private LocalDateTime occurredAt;
