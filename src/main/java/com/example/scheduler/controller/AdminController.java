@@ -25,10 +25,52 @@ public class AdminController {
 
     // ----- Audit logs -----
     @GetMapping("/audit-logs")
-    public ResponseEntity<List<AdminDto.AuditLogItem>> listAuditLogs() {
-        var list = auditRepo.findAll().stream().map(l -> new AdminDto.AuditLogItem(
+    public ResponseEntity<List<AdminDto.AuditLogItem>> listAuditLogs(
+            @RequestParam(value = "category", required = false) String category,
+            @RequestParam(value = "serverId", required = false) Long serverId,
+            @RequestParam(value = "action", required = false) String action
+    ) {
+        java.util.Set<String> actions = null;
+        if (action != null && !action.isBlank()) {
+            actions = java.util.Set.of(action);
+        } else if (category != null) {
+            switch (category) {
+                case "server" -> actions = java.util.Set.of(
+                        "CREATE_SERVER", "JOIN_SERVER", "LEAVE_SERVER", "KICK_MEMBER", "CHANGE_ADMIN"
+                );
+                case "timetable" -> actions = java.util.Set.of(
+                        "TIMETABLE_REGISTER", "TIMETABLE_UPDATE", "TIMETABLE_DELETE", "TIMETABLE_RESET_DELETE"
+                );
+                case "party" -> actions = java.util.Set.of(
+                        "PARTY_CREATE", "PARTY_JOIN", "PARTY_LEAVE", "PARTY_DELETE"
+                );
+                default -> actions = null;
+            }
+        }
+
+        var stream = auditRepo.findAll().stream();
+        if (serverId != null) {
+            stream = stream.filter(l -> serverId.equals(l.getServerId()));
+        }
+        if (actions != null && !actions.isEmpty()) {
+            java.util.Set<String> finalActions = actions;
+            stream = stream.filter(l -> finalActions.contains(l.getAction()));
+        }
+        var list = stream.map(l -> new AdminDto.AuditLogItem(
                 l.getId(), l.getServerId(), l.getUserId(), l.getAction(), l.getDetails(), l.getOccurredAt()
         )).toList();
+        return ResponseEntity.ok(list);
+    }
+
+    // 서버별 참가 기록(Join) 조회
+    @GetMapping("/servers/{id}/join-logs")
+    public ResponseEntity<List<AdminDto.AuditLogItem>> listServerJoinLogs(@PathVariable("id") Long id) {
+        var list = auditRepo.findAll().stream()
+                .filter(l -> id.equals(l.getServerId()))
+                .filter(l -> "JOIN_SERVER".equals(l.getAction()))
+                .map(l -> new AdminDto.AuditLogItem(
+                        l.getId(), l.getServerId(), l.getUserId(), l.getAction(), l.getDetails(), l.getOccurredAt()
+                )).toList();
         return ResponseEntity.ok(list);
     }
 

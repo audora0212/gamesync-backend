@@ -24,6 +24,7 @@ public class NotificationService {
     private final UserRepository userRepository;
     private final com.example.scheduler.repository.FriendNotificationSettingRepository friendNotiRepo;
     private final PushService pushService;
+    private final AuditService auditService;
 
     private User currentUser() {
         String username = SecurityContextHolder.getContext().getAuthentication().getName();
@@ -67,6 +68,7 @@ public class NotificationService {
             // Body 정규화 및 클릭 URL 구성
             String pushBody = null;
             String clickUrl = null;
+            Long serverIdForAudit = null;
             if (message != null) {
                 String trimmed = message.trim();
                 if (trimmed.startsWith("{") && trimmed.endsWith("}")) {
@@ -96,6 +98,7 @@ public class NotificationService {
                             pushBody = String.format("%s님이 %s 서버에 %s 예약을 등록했습니다.", from, serverName, gameName);
                             if (node.has("serverId")) {
                                 long serverId = node.get("serverId").asLong();
+                                serverIdForAudit = serverId;
                                 clickUrl = "/server/" + serverId;
                             }
                         } else if ("party".equals(kind)) {
@@ -106,6 +109,7 @@ public class NotificationService {
                             Integer capacity = node.has("capacity") ? node.get("capacity").asInt(0) : 0;
                             if (node.has("serverId")) {
                                 long serverId = node.get("serverId").asLong();
+                                serverIdForAudit = serverId;
                                 clickUrl = "/server/" + serverId + "?open=party";
                             }
                             pushBody = String.format("%s님이 %s에서 %s 파티를 모집합니다 (%d명)", from, serverName, gameName, capacity);
@@ -128,6 +132,25 @@ public class NotificationService {
             if (allow) {
                 String bodyToSend = (pushBody != null && pushBody.length() <= 120) ? pushBody : null;
                 pushService.pushToUser(to, title, bodyToSend, data);
+
+                // 감사 로그: 트리거 사용자(있으면), 수신자, 타입/제목/메시지/URL 요약
+                Long actorUserId = null;
+                try {
+                    var auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+                    if (auth != null) {
+                        String username = auth.getName();
+                        actorUserId = userRepository.findByUsername(username).map(User::getId).orElse(null);
+                    }
+                } catch (Exception ignored) {}
+
+                String shortTitle = title != null ? (title.length() > 120 ? title.substring(0, 120) : title) : null;
+                String shortMsg = message != null ? (message.length() > 200 ? message.substring(0, 200) : message) : null;
+                String safeUrl = (clickUrl != null && clickUrl.length() > 200) ? clickUrl.substring(0, 200) : clickUrl;
+                String details = String.format(
+                        "toUserId=%d type=%s title=%s msg=%s url=%s",
+                        to.getId(), type.name(), String.valueOf(shortTitle), String.valueOf(shortMsg), String.valueOf(safeUrl)
+                );
+                auditService.log(serverIdForAudit, actorUserId, "PUSH_NOTIFY", details);
             }
         } catch (Exception ignored) {
             org.slf4j.LoggerFactory.getLogger(NotificationService.class)
@@ -143,6 +166,23 @@ public class NotificationService {
             data.put("type", type.name());
             if (message != null) data.put("payload", message);
             pushService.pushToUser(to, title, (message != null && message.length() <= 120) ? message : null, data);
+
+            // 감사 로그: push-only 케이스도 동일하게 기록
+            Long actorUserId = null;
+            try {
+                var auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+                if (auth != null) {
+                    String username = auth.getName();
+                    actorUserId = userRepository.findByUsername(username).map(User::getId).orElse(null);
+                }
+            } catch (Exception ignored) {}
+            String shortTitle = title != null ? (title.length() > 120 ? title.substring(0, 120) : title) : null;
+            String shortMsg = message != null ? (message.length() > 200 ? message.substring(0, 200) : message) : null;
+            String details = String.format(
+                    "toUserId=%d type=%s title=%s msg=%s",
+                    to.getId(), type.name(), String.valueOf(shortTitle), String.valueOf(shortMsg)
+            );
+            auditService.log(null, actorUserId, "PUSH_NOTIFY", details);
         } catch (Exception ignored) {
             org.slf4j.LoggerFactory.getLogger(NotificationService.class)
                     .warn("Push-only dispatch skipped due to exception");
