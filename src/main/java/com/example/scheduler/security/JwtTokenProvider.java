@@ -23,6 +23,9 @@ public class JwtTokenProvider {
     @Value("${jwt.expiration-ms}")
     private long validityInMs;
 
+    @Value("${jwt.refresh-expiration-ms:1209600000}") // 기본 14일
+    private long refreshValidityInMs;
+
     private final BlacklistedTokenRepository blacklistRepo;
 
     private Key key;
@@ -41,8 +44,16 @@ public class JwtTokenProvider {
 
     /* ---------- 발행 ---------- */
     public String createToken(String username) {
+        return createToken(username, validityInMs);
+    }
+
+    public String createRefreshToken(String username) {
+        return createToken(username, refreshValidityInMs);
+    }
+
+    private String createToken(String username, long ttlMs) {
         Date now    = new Date();
-        Date expiry = new Date(now.getTime() + validityInMs);
+        Date expiry = new Date(now.getTime() + ttlMs);
 
         return Jwts.builder()
                 .setSubject(username)

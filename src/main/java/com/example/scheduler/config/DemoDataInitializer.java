@@ -6,6 +6,7 @@ import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
@@ -18,6 +19,7 @@ import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 
 @Component
+@ConditionalOnProperty(prefix = "app.demo-data", name = "enabled", havingValue = "true")
 @RequiredArgsConstructor
 public class DemoDataInitializer implements ApplicationRunner {
 

@@ -18,6 +18,8 @@ import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.Arrays;
 
+import jakarta.servlet.http.Cookie;
+
 @Component
 public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
     private final JwtTokenProvider jwtProvider;
@@ -60,7 +62,14 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
             provider = "discord";
         }
 
-        String token = jwtProvider.createToken(user.getUsername());
+        String accessToken = jwtProvider.createToken(user.getUsername());
+        String refreshToken = jwtProvider.createRefreshToken(user.getUsername());
+
+        // HttpOnly refresh 쿠키 설정
+        Cookie cookie = new Cookie("refresh-token", refreshToken);
+        cookie.setHttpOnly(true);
+        cookie.setPath("/");
+        res.addCookie(cookie);
 
         Map<String,Object> payload = Map.of(
                 "id",       user.getId(),
@@ -87,7 +96,7 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
         System.out.println("[OAuth2Success] oauth_target_cookie=" + oauthTarget);
 
         // 기본: 웹 콜백 (단, 모바일 UA에서는 스킴을 기본으로 폴백)
-        String finalUrl = String.format("%s%s?token=%s&user=%s", frontendBaseUrl, callbackPath, token, encodedUser);
+        String finalUrl = String.format("%s%s?token=%s&user=%s", frontendBaseUrl, callbackPath, accessToken, encodedUser);
 
         if (oauthTarget != null) {
             switch (oauthTarget) {
@@ -99,7 +108,7 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
                     finalUrl = String.format("%s%s?token=%s&user=%s",
                             base,
                             path,
-                            token,
+                            accessToken,
                             encodedUser);
                     break;
                 case "mobile-web":
@@ -115,7 +124,7 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
             if (ua != null && (ua.contains("iPhone") || ua.contains("iPad") || ua.contains("iPod") || ua.contains("Mobile"))) {
                 String base = iosScheme.endsWith("://") ? (iosScheme + "/") : (iosScheme.endsWith(":/") ? (iosScheme + "/") : (iosScheme + "://" + "/"));
                 String path = callbackPath.startsWith("/") ? callbackPath.substring(1) : callbackPath;
-                finalUrl = String.format("%s%s?token=%s&user=%s", base, path, token, encodedUser);
+                finalUrl = String.format("%s%s?token=%s&user=%s", base, path, accessToken, encodedUser);
             }
         }
 
@@ -127,7 +136,6 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
         jakarta.servlet.http.Cookie expired = new jakarta.servlet.http.Cookie("oauth_target", "");
         expired.setMaxAge(0);
         expired.setPath("/");
-        // SameSite, Secure 등은 Set-Cookie 헤더에 추가해야 하지만 표준 Cookie API로는 제한적
         res.addCookie(expired);
 
         res.sendRedirect(finalUrl);

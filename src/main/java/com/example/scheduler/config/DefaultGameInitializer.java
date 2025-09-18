@@ -7,6 +7,7 @@ import com.example.scheduler.repository.UserRepository;
 import com.example.scheduler.service.FriendCodeService;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Component;
@@ -15,6 +16,7 @@ import java.io.BufferedReader;
 import java.io.InputStreamReader;
 
 @Component
+@ConditionalOnProperty(prefix = "app.default-games", name = "enabled", havingValue = "true")
 @RequiredArgsConstructor
 public class DefaultGameInitializer implements ApplicationRunner {
 
