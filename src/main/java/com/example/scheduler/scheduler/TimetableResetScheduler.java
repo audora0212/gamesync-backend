@@ -5,6 +5,7 @@ import com.example.scheduler.domain.TimetableEntry;
 import com.example.scheduler.service.AuditService;
 import com.example.scheduler.repository.ServerRepository;
 import com.example.scheduler.repository.TimetableEntryRepository;
+import com.example.scheduler.repository.PartyRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -18,6 +19,7 @@ import java.util.List;
 public class TimetableResetScheduler {
     private final ServerRepository serverRepo;
     private final TimetableEntryRepository entryRepo;
+    private final PartyRepository partyRepo;
     private final AuditService auditService;
 
     @Scheduled(cron = "0 * * * * *", zone = "Asia/Seoul")
@@ -40,6 +42,12 @@ public class TimetableResetScheduler {
                 }
             } catch (Exception ignored) {}
             entryRepo.deleteAllByServer(srv);
+
+            // 파티도 함께 초기화
+            try {
+                auditService.log(srv.getId(), null, "PARTY_RESET_DELETE", "reason=SERVER_RESET");
+            } catch (Exception ignored) {}
+            partyRepo.deleteAllByServer(srv);
         }
     }
 

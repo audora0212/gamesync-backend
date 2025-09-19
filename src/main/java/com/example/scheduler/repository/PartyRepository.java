@@ -11,6 +11,8 @@ public interface PartyRepository extends JpaRepository<Party, Long> {
     List<Party> findByServerOrderBySlotAsc(Server server);
     List<Party> findByParticipantsContaining(User user);
     boolean existsByServerAndParticipantsContaining(Server server, User user);
+
+    void deleteAllByServer(Server server);
 }
 
 
