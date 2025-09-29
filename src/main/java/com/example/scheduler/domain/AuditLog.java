@@ -21,5 +21,7 @@ public class AuditLog {
     private String action;        // "REGISTER", "JOIN", "LEAVE" 등
     @Column(name = "occurred_at", nullable = false)
     private LocalDateTime occurredAt;
+    @Lob
+    @Column(columnDefinition = "TEXT")
     private String details;       // 추가 정보
 }
