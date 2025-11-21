@@ -1,0 +1,32 @@
+server.port=8080
+
+# DB
+spring.datasource.url=jdbc:mysql://localhost:3306/scheduler_db?serverTimezone=Asia/Seoul&useSSL=false
+spring.datasource.username=root
+spring.datasource.password=password
+
+# JPA
+spring.jpa.hibernate.ddl-auto=update
+spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.MySQL8Dialect
+
+# JWT (24h)
+jwt.secret=YOUR_JWT_SECRET_HERE
+jwt.expiration-ms=86400000
+
+# Discord Bot
+discord.bot.token=YOUR_BOT_TOKEN_HERE
+
+# OAuth2 (Discord)
+spring.security.oauth2.client.registration.discord.client-id=YOUR_CLIENT_ID
+spring.security.oauth2.client.registration.discord.client-secret=YOUR_CLIENT_SECRET
+spring.security.oauth2.client.registration.discord.redirect-uri={baseUrl}/login/oauth2/code/{registrationId}
+spring.security.oauth2.client.registration.discord.scope=identify,email
+spring.security.oauth2.client.provider.discord.authorization-uri=https://discord.com/api/oauth2/authorize
+spring.security.oauth2.client.provider.discord.token-uri=https://discord.com/api/oauth2/token
+spring.security.oauth2.client.provider.discord.user-info-uri=https://discord.com/api/users/@me
+spring.security.oauth2.client.provider.discord.user-name-attribute=id
+
+# Front/Back base URL
+app.frontend.base-url=http://localhost:3000
+app.backend.base-url=http://localhost:8080
+app.cors.allowed-origins=http://localhost:3000
