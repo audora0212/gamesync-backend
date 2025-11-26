@@ -2,6 +2,9 @@
 package com.example.scheduler.domain;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 import lombok.*;
 import java.time.LocalDateTime;
 import java.util.Set;
@@ -22,9 +25,12 @@ public class User {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;                      // 유저 아이디
 
+    @NotBlank(message = "사용자명은 필수입니다")
+    @Size(min = 3, max = 50, message = "사용자명은 3~50자여야 합니다")
     @Column(unique = true, nullable = false)
     private String username;              // 유저 이름
 
+    @Size(min = 1, max = 30, message = "닉네임은 1~30자여야 합니다")
     @Column(nullable = true)
     private String nickname;              // 표기될 이름
 
@@ -37,9 +43,11 @@ public class User {
     @Column(unique = true)
     private String kakaoId;               // Kakao 고유 ID
 
+    @Email(message = "올바른 이메일 형식이 아닙니다")
     @Column(unique = true, nullable = true)
     private String email;                 // ← 새로 추가된 이메일 필드
 
+    @Size(min = 6, max = 6, message = "친구코드는 6자리여야 합니다")
     @Column(length = 6, unique = true)
     private String friendCode;            // ← 친구코드(6자리 숫자)
 

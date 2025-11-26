@@ -2,6 +2,9 @@
 package com.example.scheduler.domain;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 import lombok.*;
 
 import java.time.LocalTime;
@@ -21,6 +24,8 @@ public class Server {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;                      // 서버 ID
 
+    @NotBlank(message = "서버 이름은 필수입니다")
+    @Size(min = 1, max = 50, message = "서버 이름은 1~50자여야 합니다")
     @Column(nullable = false)
     private String name;                  // 서버 이름
 
@@ -34,6 +39,8 @@ public class Server {
             inverseJoinColumns = @JoinColumn(name = "user_id"))
     private Set<User> members;            // 서버 멤버
 
+    @NotBlank(message = "초대 코드는 필수입니다")
+    @Size(min = 6, max = 6, message = "초대 코드는 6자리여야 합니다")
     @Column(nullable = false, unique = true, length = 6)
     private String inviteCode;
 
@@ -46,6 +53,7 @@ public class Server {
     @OneToMany(mappedBy = "server", cascade = CascadeType.ALL, orphanRemoval = true)
     private Set<TimetableEntry> entries;  // 타임테이블 엔트리
 
+    @NotNull(message = "리셋 시간은 필수입니다")
     @Column(nullable = false)
     private LocalTime resetTime;          // 타임테이블 초기화 시각
 
