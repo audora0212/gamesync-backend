@@ -48,3 +48,12 @@ springdoc.swagger-ui.path=/swagger-ui.html
 springdoc.swagger-ui.tags-sorter=alpha
 springdoc.swagger-ui.operations-sorter=alpha
 springdoc.default-produces-media-type=application/json
+
+# Audit
+app.audit.enabled=true
+
+# Logging
+logging.level.com.example.scheduler=INFO
+logging.level.org.springframework.web=DEBUG
+logging.level.org.hibernate.SQL=DEBUG
+logging.level.org.hibernate.type.descriptor.sql.BasicBinder=TRACE
