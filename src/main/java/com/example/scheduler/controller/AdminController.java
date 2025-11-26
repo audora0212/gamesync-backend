@@ -1,12 +1,18 @@
 package com.example.scheduler.controller;
 
+import com.example.scheduler.domain.AuditLog;
 import com.example.scheduler.domain.Server;
 import com.example.scheduler.domain.TimetableEntry;
 import com.example.scheduler.domain.Party;
 import com.example.scheduler.dto.AdminDto;
+import com.example.scheduler.dto.PageResponse;
 import com.example.scheduler.repository.*;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
@@ -14,6 +20,7 @@ import org.springframework.http.HttpStatus;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Set;
 
 @RestController
 @RequestMapping("/api/admin")
@@ -29,67 +36,87 @@ public class AdminController {
 
     // ----- Audit logs -----
     @GetMapping("/audit-logs")
-    public ResponseEntity<List<AdminDto.AuditLogItem>> listAuditLogs(
+    public ResponseEntity<PageResponse<AdminDto.AuditLogItem>> listAuditLogs(
             @RequestParam(value = "category", required = false) String category,
             @RequestParam(value = "serverId", required = false) Long serverId,
-            @RequestParam(value = "action", required = false) String action
+            @RequestParam(value = "action", required = false) String action,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size
     ) {
-        java.util.Set<String> actions = null;
+        Pageable pageable = PageRequest.of(page, Math.min(size, 100));  // 최대 100개 제한
+
+        Set<String> actions = null;
         if (action != null && !action.isBlank()) {
-            actions = java.util.Set.of(action);
+            actions = Set.of(action);
         } else if (category != null) {
-            switch (category) {
-                case "server" -> actions = java.util.Set.of(
-                        "CREATE_SERVER", "JOIN_SERVER", "LEAVE_SERVER", "KICK_MEMBER", "CHANGE_ADMIN"
-                );
-                case "timetable" -> actions = java.util.Set.of(
-                        "TIMETABLE_REGISTER", "TIMETABLE_UPDATE", "TIMETABLE_DELETE", "TIMETABLE_RESET_DELETE"
-                );
-                case "party" -> actions = java.util.Set.of(
-                        "PARTY_CREATE", "PARTY_JOIN", "PARTY_LEAVE", "PARTY_DELETE"
-                );
-                default -> actions = null;
-            }
+            actions = switch (category) {
+                case "server" -> Set.of("CREATE_SERVER", "JOIN_SERVER", "LEAVE_SERVER", "KICK_MEMBER", "CHANGE_ADMIN");
+                case "timetable" -> Set.of("TIMETABLE_REGISTER", "TIMETABLE_UPDATE", "TIMETABLE_DELETE", "TIMETABLE_RESET_DELETE");
+                case "party" -> Set.of("PARTY_CREATE", "PARTY_JOIN", "PARTY_LEAVE", "PARTY_DELETE");
+                default -> null;
+            };
         }
 
-        var stream = auditRepo.findAll().stream();
-        if (serverId != null) {
-            stream = stream.filter(l -> serverId.equals(l.getServerId()));
+        Page<AuditLog> auditPage;
+        if (serverId != null && actions != null && !actions.isEmpty()) {
+            auditPage = auditRepo.findByServerIdAndActionInOrderByOccurredAtDesc(serverId, actions, pageable);
+        } else if (serverId != null) {
+            auditPage = auditRepo.findByServerIdOrderByOccurredAtDesc(serverId, pageable);
+        } else if (actions != null && !actions.isEmpty()) {
+            auditPage = auditRepo.findByActionInOrderByOccurredAtDesc(actions, pageable);
+        } else {
+            auditPage = auditRepo.findAllByOrderByOccurredAtDesc(pageable);
         }
-        if (actions != null && !actions.isEmpty()) {
-            java.util.Set<String> finalActions = actions;
-            stream = stream.filter(l -> finalActions.contains(l.getAction()));
-        }
-        var list = stream.map(l -> new AdminDto.AuditLogItem(
-                l.getId(), l.getServerId(), l.getUserId(),
-                (l.getUserId()!=null? userRepo.findById(l.getUserId()).map(u->u.getNickname()).orElse(null):null),
-                l.getAction(), l.getDetails(), l.getOccurredAt()
-        )).toList();
-        return ResponseEntity.ok(list);
+
+        List<AdminDto.AuditLogItem> items = auditPage.getContent().stream()
+                .map(l -> new AdminDto.AuditLogItem(
+                        l.getId(), l.getServerId(), l.getUserId(),
+                        l.getUserId() != null ? userRepo.findById(l.getUserId()).map(u -> u.getNickname()).orElse(null) : null,
+                        l.getAction(), l.getDetails(), l.getOccurredAt()
+                )).toList();
+
+        return ResponseEntity.ok(PageResponse.of(auditPage, items));
     }
 
     // 서버별 참가 기록(Join) 조회
     @GetMapping("/servers/{id}/join-logs")
-    public ResponseEntity<List<AdminDto.AuditLogItem>> listServerJoinLogs(@PathVariable("id") Long id) {
-        var list = auditRepo.findAll().stream()
-                .filter(l -> id.equals(l.getServerId()))
-                .filter(l -> "JOIN_SERVER".equals(l.getAction()))
+    public ResponseEntity<PageResponse<AdminDto.AuditLogItem>> listServerJoinLogs(
+            @PathVariable("id") Long id,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size
+    ) {
+        Pageable pageable = PageRequest.of(page, Math.min(size, 100));
+        Page<AuditLog> auditPage = auditRepo.findByServerIdAndActionOrderByOccurredAtDesc(id, "JOIN_SERVER", pageable);
+
+        List<AdminDto.AuditLogItem> items = auditPage.getContent().stream()
                 .map(l -> new AdminDto.AuditLogItem(
                         l.getId(), l.getServerId(), l.getUserId(),
-                        (l.getUserId()!=null? userRepo.findById(l.getUserId()).map(u->u.getNickname()).orElse(null):null),
+                        l.getUserId() != null ? userRepo.findById(l.getUserId()).map(u -> u.getNickname()).orElse(null) : null,
                         l.getAction(), l.getDetails(), l.getOccurredAt()
                 )).toList();
-        return ResponseEntity.ok(list);
+
+        return ResponseEntity.ok(PageResponse.of(auditPage, items));
     }
 
     // ----- Servers -----
     @GetMapping("/servers")
-    public ResponseEntity<List<AdminDto.ServerItem>> listServers() {
-        var list = serverRepo.findAll().stream().map(s -> new AdminDto.ServerItem(
-                s.getId(), s.getName(), s.getOwner()!=null?s.getOwner().getId():null, s.getOwner()!=null?s.getOwner().getNickname():null,
-                s.getResetTime(), s.getMembers()!=null?s.getMembers().size():0
-        )).toList();
-        return ResponseEntity.ok(list);
+    public ResponseEntity<PageResponse<AdminDto.ServerItem>> listServers(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size
+    ) {
+        Pageable pageable = PageRequest.of(page, Math.min(size, 100), Sort.by("id").descending());
+        Page<Server> serverPage = serverRepo.findAll(pageable);
+
+        List<AdminDto.ServerItem> items = serverPage.getContent().stream()
+                .map(s -> new AdminDto.ServerItem(
+                        s.getId(), s.getName(),
+                        s.getOwner() != null ? s.getOwner().getId() : null,
+                        s.getOwner() != null ? s.getOwner().getNickname() : null,
+                        s.getResetTime(),
+                        s.getMembers() != null ? s.getMembers().size() : 0
+                )).toList();
+
+        return ResponseEntity.ok(PageResponse.of(serverPage, items));
     }
 
     @DeleteMapping("/servers/{id}")
@@ -127,17 +154,25 @@ public class AdminController {
 
     // ----- Timetables -----
     @GetMapping("/timetables")
-    public ResponseEntity<List<AdminDto.TimetableItem>> listTimetables() {
-        var list = entryRepo.findAll().stream().map(e -> new AdminDto.TimetableItem(
-                e.getId(),
-                e.getServer()!=null?e.getServer().getId():null,
-                e.getServer()!=null?e.getServer().getName():null,
-                e.getUser()!=null?e.getUser().getId():null,
-                e.getUser()!=null?e.getUser().getNickname():null,
-                e.getSlot(),
-                e.getCustomGame()!=null?e.getCustomGame().getName():(e.getDefaultGame()!=null?e.getDefaultGame().getName():null)
-        )).toList();
-        return ResponseEntity.ok(list);
+    public ResponseEntity<PageResponse<AdminDto.TimetableItem>> listTimetables(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size
+    ) {
+        Pageable pageable = PageRequest.of(page, Math.min(size, 100), Sort.by("slot").descending());
+        Page<TimetableEntry> entryPage = entryRepo.findAll(pageable);
+
+        List<AdminDto.TimetableItem> items = entryPage.getContent().stream()
+                .map(e -> new AdminDto.TimetableItem(
+                        e.getId(),
+                        e.getServer() != null ? e.getServer().getId() : null,
+                        e.getServer() != null ? e.getServer().getName() : null,
+                        e.getUser() != null ? e.getUser().getId() : null,
+                        e.getUser() != null ? e.getUser().getNickname() : null,
+                        e.getSlot(),
+                        e.getCustomGame() != null ? e.getCustomGame().getName() : (e.getDefaultGame() != null ? e.getDefaultGame().getName() : null)
+                )).toList();
+
+        return ResponseEntity.ok(PageResponse.of(entryPage, items));
     }
 
     @DeleteMapping("/timetables/{id}")
@@ -184,18 +219,26 @@ public class AdminController {
 
     // ----- Parties -----
     @GetMapping("/parties")
-    public ResponseEntity<List<AdminDto.PartyItem>> listParties() { 
-        var list = partyRepo.findAll().stream().map(p -> new AdminDto.PartyItem(
-                p.getId(),
-                p.getServer()!=null?p.getServer().getId():null,
-                p.getServer()!=null?p.getServer().getName():null,
-                p.getCreator()!=null?p.getCreator().getId():null,
-                p.getCreator()!=null?p.getCreator().getNickname():null,
-                p.getSlot(), p.getCapacity(),
-                p.getCustomGame()!=null?p.getCustomGame().getName():(p.getDefaultGame()!=null?p.getDefaultGame().getName():null),
-                p.getParticipants()!=null?p.getParticipants().size():0
-        )).toList();
-        return ResponseEntity.ok(list);
+    public ResponseEntity<PageResponse<AdminDto.PartyItem>> listParties(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size
+    ) {
+        Pageable pageable = PageRequest.of(page, Math.min(size, 100), Sort.by("slot").descending());
+        Page<Party> partyPage = partyRepo.findAll(pageable);
+
+        List<AdminDto.PartyItem> items = partyPage.getContent().stream()
+                .map(p -> new AdminDto.PartyItem(
+                        p.getId(),
+                        p.getServer() != null ? p.getServer().getId() : null,
+                        p.getServer() != null ? p.getServer().getName() : null,
+                        p.getCreator() != null ? p.getCreator().getId() : null,
+                        p.getCreator() != null ? p.getCreator().getNickname() : null,
+                        p.getSlot(), p.getCapacity(),
+                        p.getCustomGame() != null ? p.getCustomGame().getName() : (p.getDefaultGame() != null ? p.getDefaultGame().getName() : null),
+                        p.getParticipants() != null ? p.getParticipants().size() : 0
+                )).toList();
+
+        return ResponseEntity.ok(PageResponse.of(partyPage, items));
     }
 
     @DeleteMapping("/parties/{id}")
