@@ -4,7 +4,7 @@ import com.example.scheduler.domain.*;
 import com.example.scheduler.dto.PartyDto;
 import com.example.scheduler.dto.TimetableDto;
 import com.example.scheduler.repository.*;
-import jakarta.transaction.Transactional;
+import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.context.SecurityContextHolder;

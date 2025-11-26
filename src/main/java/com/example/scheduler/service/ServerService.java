@@ -10,7 +10,7 @@ import com.example.scheduler.repository.ServerInviteRepository;
 import com.example.scheduler.repository.ServerRepository;
 import com.example.scheduler.repository.TimetableEntryRepository;
 import com.example.scheduler.repository.UserRepository;
-import jakarta.transaction.Transactional;
+import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.springframework.data.domain.Page;

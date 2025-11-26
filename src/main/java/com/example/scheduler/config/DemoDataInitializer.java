@@ -2,7 +2,7 @@ package com.example.scheduler.config;
 
 import com.example.scheduler.domain.*;
 import com.example.scheduler.repository.*;
-import jakarta.transaction.Transactional;
+import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;

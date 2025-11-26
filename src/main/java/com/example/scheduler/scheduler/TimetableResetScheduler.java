@@ -6,7 +6,7 @@ import com.example.scheduler.service.AuditService;
 import com.example.scheduler.repository.ServerRepository;
 import com.example.scheduler.repository.TimetableEntryRepository;
 import com.example.scheduler.repository.PartyRepository;
-import jakarta.transaction.Transactional;
+import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;

@@ -7,7 +7,7 @@ import com.example.scheduler.domain.Server;
 import com.example.scheduler.domain.User;
 import com.example.scheduler.dto.GameDto;
 import com.example.scheduler.repository.*;
-import jakarta.transaction.Transactional;
+import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.context.SecurityContextHolder;
