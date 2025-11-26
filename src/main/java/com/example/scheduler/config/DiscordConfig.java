@@ -14,7 +14,7 @@ import javax.security.auth.login.LoginException;
 @Configuration
 public class DiscordConfig {
 
-    @Value("${discord.bot.token}")
+    @Value("${discord.bot.token:}")
     private String discordBotToken;
 
     private final DiscordBotListener discordBotListener;

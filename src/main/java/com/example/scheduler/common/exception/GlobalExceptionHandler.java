@@ -26,7 +26,7 @@ import java.util.stream.Collectors;
  * 모든 예외를 표준화된 ApiResponse 형식으로 반환
  */
 @Slf4j
-@RestControllerAdvice
+@RestControllerAdvice(basePackages = "com.example.scheduler")
 public class GlobalExceptionHandler {
 
     /**
