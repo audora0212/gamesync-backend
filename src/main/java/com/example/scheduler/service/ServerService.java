@@ -1,5 +1,9 @@
 package com.example.scheduler.service;
 
+import com.example.scheduler.common.exception.BadRequestException;
+import com.example.scheduler.common.exception.ErrorCode;
+import com.example.scheduler.common.exception.ForbiddenException;
+import com.example.scheduler.common.exception.NotFoundException;
 import com.example.scheduler.domain.CustomGame;
 import com.example.scheduler.domain.Server;
 import com.example.scheduler.domain.User;
@@ -15,14 +19,13 @@ import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
-import org.springframework.http.HttpStatus;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
-import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 import java.util.stream.Collectors;
 
+@lombok.extern.slf4j.Slf4j
 @Service
 @RequiredArgsConstructor
 public class ServerService {
@@ -33,10 +36,12 @@ public class ServerService {
     private final CustomGameRepository customGameRepo;
     private final AuditService auditService;
     private final NotificationService notificationService;
-    private final boolean AuditEnable=true; //감사로그 온오프
     private final ServerInviteRepository inviteRepo;
     private final FriendshipRepository friendshipRepository;
     private final com.example.scheduler.repository.FavoriteServerRepository favoriteRepo;
+
+    @org.springframework.beans.factory.annotation.Value("${app.audit.enabled:true}")
+    private boolean auditEnabled;
 
     /* ---------- 생성 / 참가 ---------- */
 
@@ -57,8 +62,11 @@ public class ServerService {
                 .collect(Collectors.toList());
     }
 
+    @Transactional
     public ServerDto.Response create(ServerDto.CreateRequest req) {
         User owner = currentUser();
+        log.info("Creating server: name={}, owner={}", req.getName(), owner.getUsername());
+
         String code = RandomStringUtils.randomAlphanumeric(6).toUpperCase();
 
         Server srv = Server.builder()
@@ -70,34 +78,38 @@ public class ServerService {
                 .inviteCode(code)
                 .build();
 
-        if(AuditEnable){
+        serverRepo.save(srv);
+        log.info("Server created successfully: id={}, name={}, inviteCode={}", srv.getId(), srv.getName(), code);
+
+        if(auditEnabled){
             auditService.log(srv.getId(), owner.getId(), "CREATE_SERVER", "name=" + req.getName());
         }
-        serverRepo.save(srv);
         return toDto(srv);
     }
 
+    @Transactional
     public ServerDto.Response join(Long serverId) {
         User user = currentUser();
         Server srv = fetch(serverId);
 
         if (srv.getMembers().contains(user)) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "이미 참가한 서버입니다");
+            throw new BadRequestException(ErrorCode.SERVER_ALREADY_MEMBER);
         }
         srv.getMembers().add(user);
         serverRepo.save(srv);
         return toDto(srv);
     }
 
+    @Transactional
     public ServerDto.Response joinByCode(String code) {
         Server srv = serverRepo.findByInviteCode(code)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid code"));
+                .orElseThrow(() -> new BadRequestException(ErrorCode.SERVER_INVALID_INVITE_CODE));
         User user = currentUser();
         if (srv.getMembers().contains(user))
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "이미 참가한 서버입니다");
+            throw new BadRequestException(ErrorCode.SERVER_ALREADY_MEMBER);
         srv.getMembers().add(user);
         serverRepo.save(srv);
-        if(AuditEnable){
+        if(auditEnabled){
             auditService.log(srv.getId(), user.getId(), "JOIN_SERVER", null);
         }
         return toDto(srv);
@@ -106,12 +118,13 @@ public class ServerService {
     /** 초대코드로 서버 기본정보 조회 (가입 전 확인용) */
     public ServerDto.Response lookupByCode(String code) {
         Server srv = serverRepo.findByInviteCode(code)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid code"));
+                .orElseThrow(() -> new BadRequestException(ErrorCode.SERVER_INVALID_INVITE_CODE));
         return toDto(srv);
     }
 
     /* ---------- 일반 수정 ---------- */
 
+    @Transactional
     public ServerDto.Response updateResetTime(Long id, ServerDto.UpdateResetTimeRequest req) {
         Server srv = fetch(id);
         assertAdmin(srv, currentUser());
@@ -121,6 +134,7 @@ public class ServerService {
         return toDto(srv);
     }
 
+    @Transactional
     public ServerDto.Response rename(Long id, ServerDto.UpdateNameRequest req) {
         Server srv = fetch(id);
         assertAdmin(srv, currentUser());
@@ -130,6 +144,7 @@ public class ServerService {
         return toDto(srv);
     }
 
+    @Transactional
     public ServerDto.Response updateDescription(Long id, ServerDto.UpdateDescriptionRequest req) {
         Server srv = fetch(id);
         assertAdmin(srv, currentUser());
@@ -138,6 +153,7 @@ public class ServerService {
         return toDto(srv);
     }
 
+    @Transactional
     public ServerDto.Response updateMaxMembers(Long id, ServerDto.UpdateMaxMembersRequest req) {
         Server srv = fetch(id);
         assertAdmin(srv, currentUser());
@@ -146,6 +162,7 @@ public class ServerService {
         return toDto(srv);
     }
 
+    @Transactional
     public ServerDto.Response toggleResetPaused(Long id, ServerDto.ToggleResetPausedRequest req) {
         Server srv = fetch(id);
         assertAdmin(srv, currentUser());
@@ -163,10 +180,14 @@ public class ServerService {
         assertAdmin(srv, me);
 
         User target = userRepo.findById(req.getUserId())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+                .orElseThrow(() -> new NotFoundException(ErrorCode.USER_NOT_FOUND));
 
-        if (srv.getOwner().equals(target))
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "서버장은 강퇴할 수 없습니다");
+        if (srv.getOwner().equals(target)) {
+            log.warn("Attempted to kick owner from server: serverId={}, ownerId={}", id, target.getId());
+            throw new BadRequestException(ErrorCode.SERVER_OWNER_CANNOT_KICK);
+        }
+
+        log.info("Kicking member from server: serverId={}, targetUserId={}, adminId={}", id, target.getId(), me.getId());
 
         // 강퇴되는 사용자의 서버 내 타임테이블 기록 삭제
         entryRepo.deleteAllByServerAndUser(srv, target);
@@ -174,32 +195,36 @@ public class ServerService {
         srv.getMembers().remove(target);
         srv.getAdmins().remove(target);
         serverRepo.save(srv);
-        if(AuditEnable){
+
+        log.info("Member kicked successfully: serverId={}, targetUserId={}", id, target.getId());
+
+        if(auditEnabled){
             auditService.log(srv.getId(), me.getId(), "KICK_MEMBER", "targetUserId=" + req.getUserId());
         }
 
         return toDto(srv);
     }
 
+    @Transactional
     public ServerDto.Response updateAdmin(Long id, ServerDto.AdminRequest req) {
         Server srv = fetch(id);
         User me = currentUser();
         assertAdmin(srv, me);
 
         User target = userRepo.findById(req.getUserId())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+                .orElseThrow(() -> new NotFoundException(ErrorCode.USER_NOT_FOUND));
 
         if (!srv.getMembers().contains(target))
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "서버 멤버가 아닙니다");
+            throw new BadRequestException(ErrorCode.SERVER_NOT_MEMBER);
 
         if (req.isGrant()) {
             srv.getAdmins().add(target);
         } else {
             if (srv.getOwner().equals(target))
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "서버장은 항상 관리자입니다");
+                throw new BadRequestException(ErrorCode.SERVER_OWNER_ALWAYS_ADMIN);
             srv.getAdmins().remove(target);
         }
-        if(AuditEnable){
+        if(auditEnabled){
             String detail = (req.isGrant() ? "GRANT_ADMIN:" : "REVOKE_ADMIN:") + req.getUserId();
             auditService.log(srv.getId(), me.getId(), "CHANGE_ADMIN", detail);
         }
@@ -215,7 +240,7 @@ public class ServerService {
         Server srv = fetch(id);
         User me = currentUser();
         if (!srv.getOwner().equals(me)) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "서버장만 삭제할 수 있습니다");
+            throw new ForbiddenException(ErrorCode.SERVER_OWNER_REQUIRED);
         }
         // 1) 타임테이블 엔트리 삭제
         entryRepo.deleteAllByServer(srv);
@@ -234,13 +259,13 @@ public class ServerService {
         Server srv = fetch(id);
         User me = currentUser();
         if (srv.getOwner().equals(me)) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "서버장은 떠날 수 없습니다");
+            throw new BadRequestException(ErrorCode.SERVER_OWNER_CANNOT_LEAVE);
         }
         entryRepo.deleteAllByServerAndUser(srv, me);
         srv.getMembers().remove(me);
         srv.getAdmins().remove(me);
         serverRepo.save(srv);
-        if(AuditEnable){
+        if(auditEnabled){
             auditService.log(srv.getId(), me.getId(), "LEAVE_SERVER", null);
         }
     }
@@ -257,37 +282,38 @@ public class ServerService {
         Server srv = fetch(id);
         User me = currentUser();
         if (!srv.getMembers().contains(me))
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "서버 멤버가 아닙니다");
+            throw new ForbiddenException(ErrorCode.SERVER_NOT_MEMBER);
 
         return toDto(srv);
     }
 
     /* ---------- 초대 기능 ---------- */
+    @Transactional
     public ServerDto.InviteResponse createInvite(Long serverId, Long receiverUserId) {
         Server srv = fetch(serverId);
         User sender = currentUser();
         if (!srv.getMembers().contains(sender))
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "서버 멤버만 초대 가능");
+            throw new ForbiddenException(ErrorCode.INVITE_ONLY_MEMBER);
 
         User receiver = userRepo.findById(receiverUserId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+                .orElseThrow(() -> new NotFoundException(ErrorCode.USER_NOT_FOUND));
 
         // 이미 서버 멤버는 초대 불가
         if (srv.getMembers().contains(receiver)) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "이미 서버 멤버입니다");
+            throw new BadRequestException(ErrorCode.SERVER_ALREADY_MEMBER);
         }
 
         boolean areFriends = friendshipRepository.existsByUserAndFriend(sender, receiver)
                 || friendshipRepository.existsByUserAndFriend(receiver, sender);
         if (!areFriends)
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "친구만 초대 가능");
+            throw new ForbiddenException(ErrorCode.INVITE_ONLY_FRIENDS);
 
         var existing = inviteRepo.findByServerAndSenderAndReceiver(srv, sender, receiver);
         com.example.scheduler.domain.ServerInvite inv;
         if (existing.isPresent()) {
             var e = existing.get();
             if (e.getStatus() == com.example.scheduler.domain.InviteStatus.PENDING) {
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "이미 대기중 초대가 있습니다");
+                throw new BadRequestException(ErrorCode.INVITE_ALREADY_PENDING);
             }
             // ACCEPTED/REJECTED 등 처리된 초대는 재전송을 위해 PENDING으로 갱신
             e.setStatus(com.example.scheduler.domain.InviteStatus.PENDING);
@@ -326,14 +352,15 @@ public class ServerService {
                 .stream().map(this::toInviteDto).collect(java.util.stream.Collectors.toList());
     }
 
+    @Transactional
     public ServerDto.InviteResponse respondInvite(Long inviteId, boolean accept) {
         User me = currentUser();
         com.example.scheduler.domain.ServerInvite inv = inviteRepo.findById(inviteId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+                .orElseThrow(() -> new NotFoundException(ErrorCode.INVITE_NOT_FOUND));
         if (!inv.getReceiver().getId().equals(me.getId()))
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "내 초대만 응답 가능");
+            throw new ForbiddenException(ErrorCode.INVITE_NOT_RECEIVER);
         if (inv.getStatus() != com.example.scheduler.domain.InviteStatus.PENDING)
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "이미 처리된 초대");
+            throw new BadRequestException(ErrorCode.INVITE_ALREADY_PROCESSED);
 
         if (accept) {
             inv.setStatus(com.example.scheduler.domain.InviteStatus.ACCEPTED);
@@ -380,13 +407,13 @@ public class ServerService {
     }
 
     private Server fetch(Long id) {
-        return serverRepo.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "서버를 찾을 수 없습니다"));
+        return serverRepo.findByIdWithMembers(id)
+                .orElseThrow(() -> new NotFoundException(ErrorCode.SERVER_NOT_FOUND));
     }
 
     private void assertAdmin(Server srv, User user) {
         if (!(srv.getOwner().equals(user) || srv.getAdmins().contains(user))) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "관리자 권한이 필요합니다");
+            throw new ForbiddenException(ErrorCode.SERVER_ADMIN_REQUIRED);
         }
     }
 
@@ -432,7 +459,7 @@ public class ServerService {
         User me = currentUser();
         Server srv = fetch(serverId);
         if (!srv.getMembers().contains(me))
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "서버 멤버만 즐겨찾기 가능");
+            throw new ForbiddenException(ErrorCode.SERVER_NOT_MEMBER);
         favoriteRepo.findByUserAndServer(me, srv)
                 .orElseGet(() -> favoriteRepo.save(
                         com.example.scheduler.domain.FavoriteServer.builder()
