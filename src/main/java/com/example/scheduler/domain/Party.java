@@ -8,7 +8,12 @@ import java.util.HashSet;
 import java.util.Set;
 
 @Entity
-@Table(name = "parties")
+@Table(name = "parties", indexes = {
+        @Index(name = "idx_party_server", columnList = "server_id"),
+        @Index(name = "idx_party_creator", columnList = "creator_id"),
+        @Index(name = "idx_party_slot", columnList = "slot"),
+        @Index(name = "idx_party_server_slot", columnList = "server_id, slot")
+})
 @Getter
 @Setter
 @NoArgsConstructor

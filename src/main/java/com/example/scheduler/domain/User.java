@@ -7,7 +7,12 @@ import java.time.LocalDateTime;
 import java.util.Set;
 
 @Entity
-@Table(name = "users")
+@Table(name = "users", indexes = {
+        @Index(name = "idx_user_username", columnList = "username"),
+        @Index(name = "idx_user_friend_code", columnList = "friendCode"),
+        @Index(name = "idx_user_discord_id", columnList = "discordId"),
+        @Index(name = "idx_user_kakao_id", columnList = "kakaoId")
+})
 @Getter
 @Setter
 @NoArgsConstructor

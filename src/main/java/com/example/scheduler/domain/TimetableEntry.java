@@ -5,7 +5,12 @@ import lombok.*;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "timetable_entries")
+@Table(name = "timetable_entries", indexes = {
+        @Index(name = "idx_entry_server", columnList = "server_id"),
+        @Index(name = "idx_entry_user", columnList = "user_id"),
+        @Index(name = "idx_entry_slot", columnList = "slot"),
+        @Index(name = "idx_entry_server_slot", columnList = "server_id, slot")
+})
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
 public class TimetableEntry {
     @Id

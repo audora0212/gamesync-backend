@@ -8,7 +8,12 @@ import java.time.LocalTime;
 import java.util.Set;
 
 @Entity
-@Table(name = "servers")
+@Table(name = "servers", indexes = {
+        @Index(name = "idx_server_reset_time", columnList = "resetTime"),
+        @Index(name = "idx_server_invite_code", columnList = "inviteCode"),
+        @Index(name = "idx_server_owner", columnList = "owner_id"),
+        @Index(name = "idx_server_discord_guild", columnList = "discordGuildId")
+})
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
 public class Server {
 

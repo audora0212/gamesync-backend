@@ -9,9 +9,14 @@ import lombok.*;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-@Table(name = "friendships", uniqueConstraints = {
-        @UniqueConstraint(columnNames = {"user_id", "friend_id"})
-})
+@Table(name = "friendships",
+        uniqueConstraints = {
+                @UniqueConstraint(columnNames = {"user_id", "friend_id"})
+        },
+        indexes = {
+                @Index(name = "idx_friendship_user", columnList = "user_id"),
+                @Index(name = "idx_friendship_friend", columnList = "friend_id")
+        })
 public class Friendship {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

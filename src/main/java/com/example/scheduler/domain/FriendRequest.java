@@ -9,9 +9,16 @@ import lombok.*;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-@Table(name = "friend_requests", uniqueConstraints = {
-        @UniqueConstraint(columnNames = {"sender_id", "receiver_id"})
-})
+@Table(name = "friend_requests",
+        uniqueConstraints = {
+                @UniqueConstraint(columnNames = {"sender_id", "receiver_id"})
+        },
+        indexes = {
+                @Index(name = "idx_freq_sender", columnList = "sender_id"),
+                @Index(name = "idx_freq_receiver", columnList = "receiver_id"),
+                @Index(name = "idx_freq_status", columnList = "status"),
+                @Index(name = "idx_freq_receiver_status", columnList = "receiver_id, status")
+        })
 public class FriendRequest {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
