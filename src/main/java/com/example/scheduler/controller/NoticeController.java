@@ -2,6 +2,7 @@ package com.example.scheduler.controller;
 
 import com.example.scheduler.dto.NoticeDto;
 import com.example.scheduler.service.NoticeService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import com.example.scheduler.security.AdminGuard;
 import org.springframework.http.ResponseEntity;
@@ -29,7 +30,7 @@ public class NoticeController {
 
     // 관리자 전용 CRUD (간단 권한 가드)
     @PostMapping("/admin/notices")
-    public ResponseEntity<NoticeDto.Detail> create(@RequestBody NoticeDto.Upsert req, org.springframework.security.core.Authentication auth) {
+    public ResponseEntity<NoticeDto.Detail> create(@Valid @RequestBody NoticeDto.Upsert req, org.springframework.security.core.Authentication auth) {
         if (auth == null || !adminGuard.isAdmin(auth.getName())) {
             return ResponseEntity.status(403).build();
         }
@@ -37,7 +38,7 @@ public class NoticeController {
     }
 
     @PutMapping("/admin/notices/{id}")
-    public ResponseEntity<NoticeDto.Detail> update(@PathVariable Long id, @RequestBody NoticeDto.Upsert req, org.springframework.security.core.Authentication auth) {
+    public ResponseEntity<NoticeDto.Detail> update(@PathVariable Long id, @Valid @RequestBody NoticeDto.Upsert req, org.springframework.security.core.Authentication auth) {
         if (auth == null || !adminGuard.isAdmin(auth.getName())) {
             return ResponseEntity.status(403).build();
         }

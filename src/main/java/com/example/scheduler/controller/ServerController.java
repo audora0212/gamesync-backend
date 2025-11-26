@@ -2,6 +2,7 @@ package com.example.scheduler.controller;
 
 import com.example.scheduler.dto.ServerDto;
 import com.example.scheduler.service.ServerService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -30,7 +31,7 @@ public class ServerController {
     }
 
     @PostMapping
-    public ResponseEntity<ServerDto.Response> create(@RequestBody ServerDto.CreateRequest req) {
+    public ResponseEntity<ServerDto.Response> create(@Valid @RequestBody ServerDto.CreateRequest req) {
         return ResponseEntity.ok(serverService.create(req));
     }
 
@@ -52,49 +53,49 @@ public class ServerController {
     @PutMapping("/{id:\\d+}/reset-time")
     public ResponseEntity<ServerDto.Response> updateResetTime(
             @PathVariable("id") Long id,
-            @RequestBody ServerDto.UpdateResetTimeRequest req) {
+            @Valid @RequestBody ServerDto.UpdateResetTimeRequest req) {
         return ResponseEntity.ok(serverService.updateResetTime(id, req));
     }
 
     @PutMapping("/{id:\\d+}/name")
     public ResponseEntity<ServerDto.Response> rename(
             @PathVariable("id") Long id,
-            @RequestBody ServerDto.UpdateNameRequest req) {
+            @Valid @RequestBody ServerDto.UpdateNameRequest req) {
         return ResponseEntity.ok(serverService.rename(id, req));
     }
 
     @PutMapping("/{id:\\d+}/description")
     public ResponseEntity<ServerDto.Response> updateDescription(
             @PathVariable("id") Long id,
-            @RequestBody ServerDto.UpdateDescriptionRequest req) {
+            @Valid @RequestBody ServerDto.UpdateDescriptionRequest req) {
         return ResponseEntity.ok(serverService.updateDescription(id, req));
     }
 
     @PutMapping("/{id:\\d+}/max-members")
     public ResponseEntity<ServerDto.Response> updateMaxMembers(
             @PathVariable("id") Long id,
-            @RequestBody ServerDto.UpdateMaxMembersRequest req) {
+            @Valid @RequestBody ServerDto.UpdateMaxMembersRequest req) {
         return ResponseEntity.ok(serverService.updateMaxMembers(id, req));
     }
 
     @PutMapping("/{id:\\d+}/reset-paused")
     public ResponseEntity<ServerDto.Response> toggleResetPaused(
             @PathVariable("id") Long id,
-            @RequestBody ServerDto.ToggleResetPausedRequest req) {
+            @Valid @RequestBody ServerDto.ToggleResetPausedRequest req) {
         return ResponseEntity.ok(serverService.toggleResetPaused(id, req));
     }
 
     @PostMapping("/{id:\\d+}/kick")
     public ResponseEntity<ServerDto.Response> kick(
             @PathVariable("id") Long id,
-            @RequestBody ServerDto.KickRequest req) {
+            @Valid @RequestBody ServerDto.KickRequest req) {
         return ResponseEntity.ok(serverService.kick(id, req));
     }
 
     @PostMapping("/{id:\\d+}/admins")
     public ResponseEntity<ServerDto.Response> updateAdmin(
             @PathVariable("id") Long id,
-            @RequestBody ServerDto.AdminRequest req) {
+            @Valid @RequestBody ServerDto.AdminRequest req) {
         return ResponseEntity.ok(serverService.updateAdmin(id, req));
     }
 
@@ -142,7 +143,7 @@ public class ServerController {
 
     /* ---------- 초대 API ---------- */
     @PostMapping("/invites")
-    public ResponseEntity<ServerDto.InviteResponse> createInvite(@RequestBody ServerDto.InviteCreateRequest req) {
+    public ResponseEntity<ServerDto.InviteResponse> createInvite(@Valid @RequestBody ServerDto.InviteCreateRequest req) {
         return ResponseEntity.ok(serverService.createInvite(req.getServerId(), req.getReceiverUserId()));
     }
 

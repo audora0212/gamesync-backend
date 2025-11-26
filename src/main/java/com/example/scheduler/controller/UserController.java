@@ -3,6 +3,7 @@ package com.example.scheduler.controller;
 import com.example.scheduler.dto.UserDto;
 import com.example.scheduler.security.AdminGuard;
 import com.example.scheduler.service.UserService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -31,7 +32,7 @@ public class UserController {
     @PutMapping("/nickname")
     public ResponseEntity<?> updateNickname(
             Authentication auth,
-            @RequestBody UserDto.UpdateNickname req
+            @Valid @RequestBody UserDto.UpdateNickname req
     ) {
         String username = auth.getName();
         try {
@@ -54,7 +55,7 @@ public class UserController {
     @PutMapping("/notifications")
     public ResponseEntity<UserDto.Profile> updateNotifications(
             Authentication auth,
-            @RequestBody UserDto.UpdateNotificationSetting req
+            @Valid @RequestBody UserDto.UpdateNotificationSetting req
     ) {
         String username = auth.getName();
         return ResponseEntity.ok(userService.updateNotificationSetting(username, Boolean.TRUE.equals(req.getEnabled())));
@@ -64,7 +65,7 @@ public class UserController {
     @PutMapping("/friend-notifications")
     public ResponseEntity<Void> updateFriendNotifications(
             Authentication auth,
-            @RequestBody UserDto.UpdateFriendNotificationSetting req
+            @Valid @RequestBody UserDto.UpdateFriendNotificationSetting req
     ) {
         String username = auth.getName();
         userService.updateFriendNotificationSetting(username, req.getFriendUserId(), Boolean.TRUE.equals(req.getEnabled()));
@@ -88,7 +89,7 @@ public class UserController {
     @PutMapping("/push-settings")
     public ResponseEntity<UserDto.PushSettingsResponse> updatePushSettings(
             Authentication auth,
-            @RequestBody UserDto.UpdatePushSettingsRequest req
+            @Valid @RequestBody UserDto.UpdatePushSettingsRequest req
     ) {
         String username = auth.getName();
         return ResponseEntity.ok(userService.updatePushSettings(username, req));

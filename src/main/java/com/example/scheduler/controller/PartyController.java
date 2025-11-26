@@ -2,6 +2,7 @@ package com.example.scheduler.controller;
 
 import com.example.scheduler.dto.PartyDto;
 import com.example.scheduler.service.PartyService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -12,10 +13,13 @@ import java.util.List;
 @RequestMapping("/api/servers/{serverId}/parties")
 @RequiredArgsConstructor
 public class PartyController {
+
     private final PartyService partyService;
 
     @PostMapping
-    public ResponseEntity<PartyDto.Response> create(@PathVariable Long serverId, @RequestBody PartyDto.CreateRequest req) {
+    public ResponseEntity<PartyDto.Response> create(
+            @PathVariable Long serverId,
+            @Valid @RequestBody PartyDto.CreateRequest req) {
         req.setServerId(serverId);
         return ResponseEntity.ok(partyService.create(req));
     }

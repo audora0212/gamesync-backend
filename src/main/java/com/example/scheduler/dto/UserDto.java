@@ -1,10 +1,13 @@
 package com.example.scheduler.dto;
 
+import jakarta.validation.constraints.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 
 public class UserDto {
-    @Data @AllArgsConstructor
+
+    @Data
+    @AllArgsConstructor
     public static class Profile {
         private Long id;
         private String username;
@@ -17,6 +20,8 @@ public class UserDto {
 
     @Data
     public static class UpdateNickname {
+        @NotBlank(message = "닉네임은 필수입니다")
+        @Size(min = 1, max = 30, message = "닉네임은 1~30자여야 합니다")
         private String nickname;
     }
 

@@ -1,8 +1,8 @@
-// controller/TimetableController.java
 package com.example.scheduler.controller;
 
 import com.example.scheduler.dto.TimetableDto;
 import com.example.scheduler.service.TimetableService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -12,12 +12,13 @@ import java.util.List;
 @RequestMapping("/api/servers/{serverId}/timetable")
 @RequiredArgsConstructor
 public class TimetableController {
+
     private final TimetableService timetableService;
 
     @PostMapping
     public ResponseEntity<TimetableDto.EntryResponse> add(
             @PathVariable Long serverId,
-            @RequestBody TimetableDto.EntryRequest req) {
+            @Valid @RequestBody TimetableDto.EntryRequest req) {
         req.setServerId(serverId);
         return ResponseEntity.ok(timetableService.add(req));
     }

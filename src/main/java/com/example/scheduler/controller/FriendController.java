@@ -2,6 +2,7 @@ package com.example.scheduler.controller;
 
 import com.example.scheduler.dto.FriendDto;
 import com.example.scheduler.service.FriendService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -17,7 +18,7 @@ public class FriendController {
     /* ---------- 친구 요청 보내기 ---------- */
     @PostMapping("/requests")
     public ResponseEntity<?> sendRequest(Authentication auth,
-                                         @RequestBody FriendDto.SendRequest req) {
+                                         @Valid @RequestBody FriendDto.SendRequest req) {
         // 아이디 혹은 친구코드로 요청을 생성한다
         friendService.sendRequest(auth.getName(), req.getReceiverId(), req.getFriendCode());
         return ResponseEntity.ok().build();
@@ -27,7 +28,7 @@ public class FriendController {
     @PostMapping("/requests/{id}/respond")
     public ResponseEntity<?> respond(Authentication auth,
                                      @PathVariable Long id,
-                                     @RequestBody FriendDto.RespondRequest req) {
+                                     @Valid @RequestBody FriendDto.RespondRequest req) {
         // 내가 받은 요청인지 확인하고 수락/거절 처리한다
         friendService.respond(auth.getName(), id, req.isAccept());
         return ResponseEntity.ok().build();

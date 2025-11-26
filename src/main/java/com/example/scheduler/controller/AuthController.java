@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.CookieValue;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.Cookie;
+import jakarta.validation.Valid;
 import java.time.Duration;
 import java.util.Map;
 
@@ -28,14 +29,14 @@ public class AuthController {
 
     /* ---------- 회원가입 ---------- */
     @PostMapping("/signup")
-    public ResponseEntity<AuthDto.SignupResponse> signup(@RequestBody AuthDto.SignupRequest req) {
+    public ResponseEntity<AuthDto.SignupResponse> signup(@Valid @RequestBody AuthDto.SignupRequest req) {
         authService.signup(req);
         return ResponseEntity.ok(new AuthDto.SignupResponse("회원가입이 완료되었습니다"));
     }
 
     /* ---------- 로그인 ---------- */
     @PostMapping("/login")
-    public ResponseEntity<AuthDto.LoginResponse> login(@RequestBody AuthDto.LoginRequest req, HttpServletRequest request, HttpServletResponse res) {
+    public ResponseEntity<AuthDto.LoginResponse> login(@Valid @RequestBody AuthDto.LoginRequest req, HttpServletRequest request, HttpServletResponse res) {
         try {
             // 1) 액세스 토큰 발급
             String token = authService.login(req);
