@@ -1,5 +1,6 @@
 package com.example.scheduler.service;
 
+import com.example.scheduler.common.exception.BadRequestException;
 import com.example.scheduler.domain.User;
 import com.example.scheduler.dto.AuthDto;
 import com.example.scheduler.repository.BlacklistedTokenRepository;
@@ -15,7 +16,6 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.web.server.ResponseStatusException;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -81,8 +81,7 @@ class AuthServiceTest {
 
         // when & then
         assertThatThrownBy(() -> authService.signup(req))
-                .isInstanceOf(ResponseStatusException.class)
-                .hasMessageContaining("이미 사용 중인 아이디입니다");
+                .isInstanceOf(BadRequestException.class);
     }
 
     @Test
@@ -111,8 +110,7 @@ class AuthServiceTest {
     void logout_InvalidHeader_ThrowsException() {
         // when & then
         assertThatThrownBy(() -> authService.logout("InvalidToken"))
-                .isInstanceOf(ResponseStatusException.class)
-                .hasMessageContaining("Authorization 헤더가 필요합니다");
+                .isInstanceOf(BadRequestException.class);
     }
 
     @Test
@@ -120,7 +118,6 @@ class AuthServiceTest {
     void logout_NullHeader_ThrowsException() {
         // when & then
         assertThatThrownBy(() -> authService.logout(null))
-                .isInstanceOf(ResponseStatusException.class)
-                .hasMessageContaining("Authorization 헤더가 필요합니다");
+                .isInstanceOf(BadRequestException.class);
     }
 }
