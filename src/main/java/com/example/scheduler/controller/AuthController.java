@@ -5,6 +5,8 @@ import com.example.scheduler.dto.AuthDto;
 import com.example.scheduler.repository.UserRepository;
 import com.example.scheduler.security.JwtTokenProvider;
 import com.example.scheduler.service.AuthService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.AuthenticationException;
@@ -21,20 +23,21 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/auth")
 @RequiredArgsConstructor
+@Tag(name = "Auth", description = "인증 관련 API (회원가입, 로그인, 토큰 갱신)")
 public class AuthController {
 
     private final AuthService authService;
     private final UserRepository userRepository;  // ← UserRepository 주입
     private final JwtTokenProvider jwtProvider;
 
-    /* ---------- 회원가입 ---------- */
+    @Operation(summary = "회원가입", description = "새 사용자 계정을 생성합니다")
     @PostMapping("/signup")
     public ResponseEntity<AuthDto.SignupResponse> signup(@Valid @RequestBody AuthDto.SignupRequest req) {
         authService.signup(req);
         return ResponseEntity.ok(new AuthDto.SignupResponse("회원가입이 완료되었습니다"));
     }
 
-    /* ---------- 로그인 ---------- */
+    @Operation(summary = "로그인", description = "사용자 인증 후 JWT 토큰을 발급합니다")
     @PostMapping("/login")
     public ResponseEntity<AuthDto.LoginResponse> login(@Valid @RequestBody AuthDto.LoginRequest req, HttpServletRequest request, HttpServletResponse res) {
         try {
@@ -64,7 +67,7 @@ public class AuthController {
         }
     }
 
-    /* ---------- 토큰 리프레시 ---------- */
+    @Operation(summary = "토큰 갱신", description = "리프레시 토큰을 사용하여 새 액세스 토큰을 발급합니다")
     @PostMapping("/refresh")
     public ResponseEntity<Map<String, String>> refresh(@CookieValue(name = "refresh-token", required = false) String refreshToken,
                                                        HttpServletRequest request,
@@ -83,7 +86,7 @@ public class AuthController {
         return ResponseEntity.ok(Map.of("token", newAccess));
     }
 
-    /* ---------- 로그아웃 ---------- */
+    @Operation(summary = "로그아웃", description = "토큰을 무효화하고 로그아웃 처리합니다")
     @PostMapping("/logout")
     public ResponseEntity<?> logout(@RequestHeader("Authorization") String authHeader, HttpServletRequest request, HttpServletResponse res) {
         authService.logout(authHeader);

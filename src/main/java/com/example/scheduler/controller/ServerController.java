@@ -2,6 +2,8 @@ package com.example.scheduler.controller;
 
 import com.example.scheduler.dto.ServerDto;
 import com.example.scheduler.service.ServerService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -12,15 +14,18 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/servers")
 @RequiredArgsConstructor
+@Tag(name = "Server", description = "서버(방) 관리 API")
 public class ServerController {
 
     private final ServerService serverService;
 
+    @Operation(summary = "내 서버 목록", description = "현재 사용자가 가입한 서버 목록을 조회합니다")
     @GetMapping("/mine")
     public ResponseEntity<List<ServerDto.Response>> listMine() {
         return ResponseEntity.ok(serverService.listMine());
     }
 
+    @Operation(summary = "서버 검색", description = "이름으로 서버를 검색합니다")
     @GetMapping("/search")
     public ResponseEntity<List<ServerDto.Response>> search(
             @RequestParam(required = false) String q,
@@ -30,21 +35,25 @@ public class ServerController {
         return ResponseEntity.ok(serverService.search(q, page, size));
     }
 
+    @Operation(summary = "서버 생성", description = "새 서버를 생성합니다")
     @PostMapping
     public ResponseEntity<ServerDto.Response> create(@Valid @RequestBody ServerDto.CreateRequest req) {
         return ResponseEntity.ok(serverService.create(req));
     }
 
+    @Operation(summary = "서버 가입 (ID)", description = "서버 ID로 가입합니다")
     @PostMapping("/{id:\\d+}/join")
     public ResponseEntity<ServerDto.Response> join(@PathVariable("id") Long id) {
         return ResponseEntity.ok(serverService.join(id));
     }
 
+    @Operation(summary = "서버 가입 (초대코드)", description = "초대 코드로 서버에 가입합니다")
     @PostMapping("/join")
     public ResponseEntity<ServerDto.Response> joinByCode(@RequestParam String code) {
         return ResponseEntity.ok(serverService.joinByCode(code));
     }
 
+    @Operation(summary = "서버 조회 (초대코드)", description = "초대 코드로 서버 정보를 미리보기합니다")
     @GetMapping("/lookup")
     public ResponseEntity<ServerDto.Response> lookupByCode(@RequestParam String code) {
         return ResponseEntity.ok(serverService.lookupByCode(code));

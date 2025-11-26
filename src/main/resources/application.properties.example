@@ -30,3 +30,21 @@ spring.security.oauth2.client.provider.discord.user-name-attribute=id
 app.frontend.base-url=http://localhost:3000
 app.backend.base-url=http://localhost:8080
 app.cors.allowed-origins=http://localhost:3000
+
+# Actuator - Monitoring
+management.endpoints.web.exposure.include=health,info,metrics,env,loggers
+management.endpoint.health.show-details=when_authorized
+management.endpoint.health.probes.enabled=true
+management.info.env.enabled=true
+
+# Application Info (shown in /actuator/info)
+info.app.name=GameSync Scheduler
+info.app.description=Game scheduling and party matching service
+info.app.version=1.0.0
+
+# Swagger/OpenAPI
+springdoc.api-docs.path=/v3/api-docs
+springdoc.swagger-ui.path=/swagger-ui.html
+springdoc.swagger-ui.tags-sorter=alpha
+springdoc.swagger-ui.operations-sorter=alpha
+springdoc.default-produces-media-type=application/json

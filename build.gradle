@@ -31,6 +31,12 @@ dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-validation'
     implementation 'org.springframework.boot:spring-boot-starter-web'
 
+    // Monitoring - Actuator
+    implementation 'org.springframework.boot:spring-boot-starter-actuator'
+
+    // API Documentation - Swagger/OpenAPI
+    implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.3.0'
+
     // Firebase Admin SDK for FCM push notifications
     implementation 'com.google.firebase:firebase-admin:9.2.0'
 

@@ -3,6 +3,8 @@ package com.example.scheduler.controller;
 import com.example.scheduler.dto.UserDto;
 import com.example.scheduler.security.AdminGuard;
 import com.example.scheduler.service.UserService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -15,10 +17,12 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/users/me")
 @RequiredArgsConstructor
+@Tag(name = "User", description = "사용자 프로필 및 설정 API")
 public class UserController {
     private final UserService userService;
     private final AdminGuard adminGuard;
 
+    @Operation(summary = "내 프로필 조회", description = "현재 로그인한 사용자의 프로필을 조회합니다")
     @GetMapping
     public ResponseEntity<UserDto.Profile> getProfile(Authentication auth) {
         String username = auth.getName();

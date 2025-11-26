@@ -71,9 +71,17 @@ public class SecurityConfig {
                                 "/api/notices/*",
                                 "/error",
                                 "/healthcheck",
+                                // Actuator endpoints
                                 "/actuator/health",
                                 "/actuator/health/**",
-                                "/actuator/info"
+                                "/actuator/info",
+                                "/actuator/metrics",
+                                "/actuator/metrics/**",
+                                // Swagger/OpenAPI endpoints
+                                "/swagger-ui.html",
+                                "/swagger-ui/**",
+                                "/v3/api-docs",
+                                "/v3/api-docs/**"
                         ).permitAll()
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .anyRequest().authenticated()

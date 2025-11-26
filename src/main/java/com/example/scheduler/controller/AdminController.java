@@ -7,6 +7,8 @@ import com.example.scheduler.domain.Party;
 import com.example.scheduler.dto.AdminDto;
 import com.example.scheduler.dto.PageResponse;
 import com.example.scheduler.repository.*;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -25,6 +27,7 @@ import java.util.Set;
 @RestController
 @RequestMapping("/api/admin")
 @RequiredArgsConstructor
+@Tag(name = "Admin", description = "관리자 전용 API")
 public class AdminController {
     private final AuditLogRepository auditRepo;
     private final ServerRepository serverRepo;
