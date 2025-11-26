@@ -4,14 +4,15 @@ import com.example.scheduler.domain.Server;
 import com.example.scheduler.domain.TimetableEntry;
 import com.example.scheduler.domain.Party;
 import com.example.scheduler.dto.AdminDto;
-import com.example.scheduler.repository.AuditLogRepository;
-import com.example.scheduler.repository.ServerRepository;
-import com.example.scheduler.repository.TimetableEntryRepository;
-import com.example.scheduler.repository.PartyRepository;
+import com.example.scheduler.repository.*;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
+import org.springframework.http.HttpStatus;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @RestController
@@ -20,9 +21,11 @@ import java.util.List;
 public class AdminController {
     private final AuditLogRepository auditRepo;
     private final ServerRepository serverRepo;
-    private final com.example.scheduler.repository.UserRepository userRepo;
+    private final UserRepository userRepo;
     private final TimetableEntryRepository entryRepo;
     private final PartyRepository partyRepo;
+    private final DefaultGameRepository defaultGameRepo;
+    private final CustomGameRepository customGameRepo;
 
     // ----- Audit logs -----
     @GetMapping("/audit-logs")
@@ -95,10 +98,31 @@ public class AdminController {
         return ResponseEntity.noContent().build();
     }
 
-    // 최소 예: 이름/리셋시간 수정은 기존 ServerService를 쓰는 게 안전하지만, 간단히 저장
+    // 서버 수정 (DTO로 안전하게 처리)
     @PutMapping("/servers")
-    public ResponseEntity<Server> upsertServer(@RequestBody Server s) {
-        return ResponseEntity.ok(serverRepo.save(s));
+    public ResponseEntity<AdminDto.ServerItem> upsertServer(@Valid @RequestBody AdminDto.ServerUpsertRequest req) {
+        Server server;
+        if (req.getId() != null) {
+            server = serverRepo.findById(req.getId())
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "서버를 찾을 수 없습니다"));
+        } else {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "관리자 API로 새 서버 생성은 지원되지 않습니다");
+        }
+        // 허용된 필드만 업데이트
+        server.setName(req.getName());
+        server.setResetTime(req.getResetTime());
+        server.setDescription(req.getDescription());
+        server.setMaxMembers(req.getMaxMembers());
+        server.setResetPaused(req.isResetPaused());
+        serverRepo.save(server);
+
+        return ResponseEntity.ok(new AdminDto.ServerItem(
+                server.getId(), server.getName(),
+                server.getOwner() != null ? server.getOwner().getId() : null,
+                server.getOwner() != null ? server.getOwner().getNickname() : null,
+                server.getResetTime(),
+                server.getMembers() != null ? server.getMembers().size() : 0
+        ));
     }
 
     // ----- Timetables -----
@@ -122,9 +146,40 @@ public class AdminController {
         return ResponseEntity.noContent().build();
     }
 
+    // 타임테이블 수정 (DTO로 안전하게 처리)
     @PutMapping("/timetables")
-    public ResponseEntity<TimetableEntry> upsertTimetable(@RequestBody TimetableEntry e) {
-        return ResponseEntity.ok(entryRepo.save(e));
+    public ResponseEntity<AdminDto.TimetableItem> upsertTimetable(@Valid @RequestBody AdminDto.TimetableUpsertRequest req) {
+        TimetableEntry entry;
+        if (req.getId() != null) {
+            entry = entryRepo.findById(req.getId())
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "타임테이블 엔트리를 찾을 수 없습니다"));
+        } else {
+            entry = new TimetableEntry();
+        }
+
+        // 연관 엔티티 조회
+        var server = serverRepo.findById(req.getServerId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "서버를 찾을 수 없습니다"));
+        var user = userRepo.findById(req.getUserId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "사용자를 찾을 수 없습니다"));
+
+        // 허용된 필드만 업데이트
+        entry.setServer(server);
+        entry.setUser(user);
+        entry.setSlot(req.getSlot());
+        entry.setDefaultGame(req.getDefaultGameId() != null ? defaultGameRepo.findById(req.getDefaultGameId()).orElse(null) : null);
+        entry.setCustomGame(req.getCustomGameId() != null ? customGameRepo.findById(req.getCustomGameId()).orElse(null) : null);
+        entryRepo.save(entry);
+
+        String gameName = entry.getCustomGame() != null ? entry.getCustomGame().getName() :
+                (entry.getDefaultGame() != null ? entry.getDefaultGame().getName() : null);
+
+        return ResponseEntity.ok(new AdminDto.TimetableItem(
+                entry.getId(),
+                server.getId(), server.getName(),
+                user.getId(), user.getNickname(),
+                entry.getSlot(), gameName
+        ));
     }
 
     // ----- Parties -----
@@ -149,8 +204,43 @@ public class AdminController {
         return ResponseEntity.noContent().build();
     }
 
+    // 파티 수정 (DTO로 안전하게 처리)
     @PutMapping("/parties")
-    public ResponseEntity<Party> upsertParty(@RequestBody Party p) { return ResponseEntity.ok(partyRepo.save(p)); }
+    public ResponseEntity<AdminDto.PartyItem> upsertParty(@Valid @RequestBody AdminDto.PartyUpsertRequest req) {
+        Party party;
+        if (req.getId() != null) {
+            party = partyRepo.findById(req.getId())
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "파티를 찾을 수 없습니다"));
+        } else {
+            party = Party.builder().createdAt(LocalDateTime.now()).build();
+        }
+
+        // 연관 엔티티 조회
+        var server = serverRepo.findById(req.getServerId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "서버를 찾을 수 없습니다"));
+        var creator = userRepo.findById(req.getCreatorId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "생성자를 찾을 수 없습니다"));
+
+        // 허용된 필드만 업데이트
+        party.setServer(server);
+        party.setCreator(creator);
+        party.setSlot(req.getSlot());
+        party.setCapacity(req.getCapacity());
+        party.setDefaultGame(req.getDefaultGameId() != null ? defaultGameRepo.findById(req.getDefaultGameId()).orElse(null) : null);
+        party.setCustomGame(req.getCustomGameId() != null ? customGameRepo.findById(req.getCustomGameId()).orElse(null) : null);
+        partyRepo.save(party);
+
+        String gameName = party.getCustomGame() != null ? party.getCustomGame().getName() :
+                (party.getDefaultGame() != null ? party.getDefaultGame().getName() : null);
+
+        return ResponseEntity.ok(new AdminDto.PartyItem(
+                party.getId(),
+                server.getId(), server.getName(),
+                creator.getId(), creator.getNickname(),
+                party.getSlot(), party.getCapacity(), gameName,
+                party.getParticipants() != null ? party.getParticipants().size() : 0
+        ));
+    }
 }
 
 
