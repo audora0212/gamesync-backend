@@ -69,7 +69,7 @@ public class AuthController {
     public ResponseEntity<Map<String, String>> refresh(@CookieValue(name = "refresh-token", required = false) String refreshToken,
                                                        HttpServletRequest request,
                                                        HttpServletResponse res) {
-        if (refreshToken == null || !jwtProvider.validateToken(refreshToken)) {
+        if (refreshToken == null || !jwtProvider.validateRefreshToken(refreshToken)) {
             return ResponseEntity.status(401).body(Map.of("message", "리프레시 토큰이 유효하지 않습니다"));
         }
         String username = jwtProvider.getUsername(refreshToken);
