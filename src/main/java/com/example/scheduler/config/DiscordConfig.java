@@ -25,8 +25,10 @@ public class DiscordConfig {
 
     @Bean
     public JDA jda() {
-        if (discordBotToken == null || discordBotToken.isEmpty() || discordBotToken.equals("YOUR_BOT_TOKEN_HERE")) {
-            System.out.println("Discord Bot Token is missing. Bot will not start.");
+        if (discordBotToken == null || discordBotToken.isEmpty()
+                || discordBotToken.equals("YOUR_BOT_TOKEN_HERE")
+                || discordBotToken.startsWith("DUMMY")) {
+            System.out.println("Discord Bot Token is missing or invalid. Bot will not start.");
             return null;
         }
 

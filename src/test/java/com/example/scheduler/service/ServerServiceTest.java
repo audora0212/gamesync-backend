@@ -1,5 +1,7 @@
 package com.example.scheduler.service;
 
+import com.example.scheduler.common.exception.BadRequestException;
+import com.example.scheduler.common.exception.NotFoundException;
 import com.example.scheduler.domain.Server;
 import com.example.scheduler.domain.User;
 import com.example.scheduler.dto.ServerDto;
@@ -14,7 +16,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalTime;
 import java.util.HashSet;
@@ -110,11 +111,11 @@ class ServerServiceTest {
                 .build();
 
         when(userRepo.findByUsername("testuser")).thenReturn(Optional.of(user));
-        when(serverRepo.findById(999L)).thenReturn(Optional.empty());
+        when(serverRepo.findByIdWithMembers(999L)).thenReturn(Optional.empty());
 
         // when & then
         assertThatThrownBy(() -> serverService.join(999L))
-                .isInstanceOf(ResponseStatusException.class);
+                .isInstanceOf(NotFoundException.class);
     }
 
     @Test
@@ -155,6 +156,6 @@ class ServerServiceTest {
 
         // when & then
         assertThatThrownBy(() -> serverService.lookupByCode("INVALID"))
-                .isInstanceOf(ResponseStatusException.class);
+                .isInstanceOf(BadRequestException.class);
     }
 }
